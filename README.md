@@ -1,36 +1,146 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pre-sales Next.js Project
 
-## Getting Started
+A modern, full-stack React application built with Next.js 15.3.5, featuring AI agent functionality, PDF generation, and beautiful animations.
 
-First, run the development server:
+## 🚀 Tech Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+### Core Framework
+- **Next.js**: 15.3.5 (latest version)
+- **Architecture**: App Router (using the appDir experimental flag)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS 4.1.0
+
+### React & Dependencies
+- **React**: 18.3.1 with React DOM
+- **TypeScript**: Full TypeScript support with proper type definitions
+
+### Key Libraries
+- **@openai/agents**: AI agent functionality
+- **@react-pdf/renderer**: PDF generation capabilities
+- **gsap**: Professional animations
+- **clsx**: Conditional CSS classes
+
+## 📁 Project Structure
+
+```
+src/
+├── app/                    # Next.js App Router
+│   ├── api/               # API routes
+│   ├── layout.tsx         # Root layout component
+│   ├── page.tsx           # Home page
+│   └── globals.css        # Global styles
+├── components/            # Reusable components
+├── lib/                   # Utility functions
+└── types/                 # TypeScript type definitions
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🛠️ Getting Started
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Prerequisites
+- Node.js 18.17 or later
+- npm or yarn package manager
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Installation
 
-## Learn More
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd "Pre sales"
+```
 
-To learn more about Next.js, take a look at the following resources:
+2. Install dependencies:
+```bash
+npm install
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3. Run the development server:
+```bash
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Deploy on Vercel
+## 📦 Available Scripts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🎨 Styling
+
+This project uses **Tailwind CSS 4.1.0** for styling. The configuration is set up in:
+- `tailwind.config.ts` - Tailwind configuration
+- `postcss.config.mjs` - PostCSS configuration
+- `src/app/globals.css` - Global styles
+
+## 🤖 AI Features
+
+The project includes **@openai/agents** for AI agent functionality. This allows you to:
+- Create intelligent agents
+- Process natural language
+- Integrate with OpenAI's latest models
+
+## 📄 PDF Generation
+
+**@react-pdf/renderer** is integrated for PDF generation capabilities:
+- Create dynamic PDFs
+- Export reports
+- Generate documents
+
+## ✨ Animations
+
+**GSAP** is included for professional animations:
+- Smooth transitions
+- Complex animations
+- Performance-optimized effects
+
+## 🚀 Deployment
+
+This project is configured for deployment on **Vercel**:
+
+1. Connect your repository to Vercel
+2. Vercel will automatically detect Next.js configuration
+3. Deploy with zero configuration
+
+### Vercel Configuration
+- Framework Preset: Next.js
+- Build Command: `npm run build`
+- Output Directory: `.next`
+- Install Command: `npm install`
+
+## 🔧 Configuration Files
+
+- `next.config.ts` - Next.js configuration
+- `tsconfig.json` - TypeScript configuration
+- `eslint.config.mjs` - ESLint configuration
+- `tailwind.config.ts` - Tailwind CSS configuration
+
+## 📝 Development Guidelines
+
+### Code Style
+- Use TypeScript for all components
+- Follow ESLint rules
+- Use Tailwind CSS for styling
+- Implement proper error handling
+
+### Component Structure
+- Use functional components with hooks
+- Implement proper TypeScript interfaces
+- Follow Next.js App Router conventions
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests and linting
+5. Submit a pull request
+
+## 📄 License
+
+This project is private and proprietary.
+
+---
+
+Built with ❤️ using Next.js, React, and TypeScript
