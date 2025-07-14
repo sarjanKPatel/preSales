@@ -1,19 +1,19 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import { cn } from '@/lib/utils';
-import Button from '@/components/Button';
-import { 
-  ChevronDown, 
-  User, 
-  Settings, 
-  LogOut, 
-  Menu, 
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
+import Button from "@/components/Button";
+import {
+  ChevronDown,
+  User,
+  Settings,
+  LogOut,
+  Menu,
   X,
-  Brain
-} from 'lucide-react';
+  Brain,
+} from "lucide-react";
 
 export default function Header() {
   const router = useRouter();
@@ -24,15 +24,15 @@ export default function Header() {
   const handleSignOut = async () => {
     await signOut();
     setShowUserMenu(false);
-    router.push('/');
+    router.push("/");
   };
 
   const handleSignIn = () => {
-    router.push('/login');
+    router.push("/login");
   };
 
   const handleSignUp = () => {
-    router.push('/signup');
+    router.push("/signup");
   };
 
   return (
@@ -52,20 +52,32 @@ export default function Header() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <a 
-              href="/proposals" 
+            <a
+              href="/proposals"
               className="text-gray-600 hover:text-primary transition-colors font-medium"
             >
               Proposals
             </a>
-            <a 
-              href="/analytics" 
+            <a
+              href="/test-ai"
+              className="text-gray-600 hover:text-primary transition-colors font-medium"
+            >
+              AI Testing
+            </a>
+            <a
+              href="/test-deep-research"
+              className="text-gray-600 hover:text-primary transition-colors font-medium"
+            >
+              Deep Research
+            </a>
+            <a
+              href="/analytics"
               className="text-gray-600 hover:text-primary transition-colors font-medium"
             >
               Analytics
             </a>
-            <a 
-              href="/templates" 
+            <a
+              href="/templates"
               className="text-gray-600 hover:text-primary transition-colors font-medium"
             >
               Templates
@@ -88,7 +100,7 @@ export default function Header() {
                       {profile?.full_name || user.email}
                     </div>
                     <div className="text-xs text-gray-500 capitalize">
-                      {profile?.role?.replace('_', ' ')}
+                      {profile?.role?.replace("_", " ")}
                     </div>
                   </div>
                   <ChevronDown className="w-4 h-4 text-gray-400" />
@@ -99,7 +111,7 @@ export default function Header() {
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
                     <div className="px-4 py-2 border-b border-gray-100">
                       <div className="text-sm font-medium text-gray-900">
-                        {profile?.full_name || 'User'}
+                        {profile?.full_name || "User"}
                       </div>
                       <div className="text-xs text-gray-500">{user.email}</div>
                     </div>
@@ -156,20 +168,32 @@ export default function Header() {
         {showMobileMenu && (
           <div className="md:hidden border-t border-gray-200 py-4">
             <nav className="flex flex-col space-y-3">
-              <a 
-                href="/proposals" 
+              <a
+                href="/proposals"
                 className="text-gray-600 hover:text-primary transition-colors font-medium px-2 py-1"
               >
                 Proposals
               </a>
-              <a 
-                href="/analytics" 
+              <a
+                href="/test-ai"
+                className="text-gray-600 hover:text-primary transition-colors font-medium px-2 py-1"
+              >
+                AI Testing
+              </a>
+              <a
+                href="/test-deep-research"
+                className="text-gray-600 hover:text-primary transition-colors font-medium px-2 py-1"
+              >
+                Deep Research
+              </a>
+              <a
+                href="/analytics"
                 className="text-gray-600 hover:text-primary transition-colors font-medium px-2 py-1"
               >
                 Analytics
               </a>
-              <a 
-                href="/templates" 
+              <a
+                href="/templates"
                 className="text-gray-600 hover:text-primary transition-colors font-medium px-2 py-1"
               >
                 Templates

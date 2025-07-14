@@ -1,38 +1,39 @@
-import React from 'react';
-import { cn } from '@/lib/utils';
-import { CardProps } from '@/types';
+import React from "react";
+import { cn } from "@/lib/utils";
+import { CardProps } from "@/types";
 
-const Card: React.FC<CardProps> = ({
+const Card: React.FC<CardProps & { onClick?: () => void }> = ({
   children,
   title,
   subtitle,
   className,
-  padding = 'md',
-  shadow = 'md',
+  padding = "md",
+  shadow = "md",
+  onClick,
   ...props
 }) => {
   const paddingClasses = {
-    sm: 'p-4',
-    md: 'p-6',
-    lg: 'p-8',
+    sm: "p-4",
+    md: "p-6",
+    lg: "p-8",
   };
 
   const shadowClasses = {
-    sm: 'shadow-sm',
-    md: 'shadow-md',
-    lg: 'shadow-lg',
-    none: 'shadow-none',
+    sm: "shadow-sm",
+    md: "shadow-md",
+    lg: "shadow-lg",
+    none: "shadow-none",
   };
 
   const classes = cn(
-    'bg-white rounded-lg border border-gray-200',
+    "bg-white rounded-lg border border-gray-200",
     paddingClasses[padding],
     shadowClasses[shadow],
     className
   );
 
   return (
-    <div className={classes} {...props}>
+    <div className={classes} onClick={onClick} {...props}>
       {(title || subtitle) && (
         <div className="mb-4">
           {title && (
@@ -40,11 +41,7 @@ const Card: React.FC<CardProps> = ({
               {title}
             </h3>
           )}
-          {subtitle && (
-            <p className="text-sm text-gray-600">
-              {subtitle}
-            </p>
-          )}
+          {subtitle && <p className="text-sm text-gray-600">{subtitle}</p>}
         </div>
       )}
       {children}
@@ -52,4 +49,4 @@ const Card: React.FC<CardProps> = ({
   );
 };
 
-export default Card; 
+export default Card;
