@@ -25,7 +25,7 @@ export default function ProposalsPage() {
   };
 
   return (
-    <Layout>
+    <Layout maxWidth="full">
       <ProposalList
         onCreateProposal={handleCreateProposal}
         onOpenProposal={handleOpenProposal}

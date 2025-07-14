@@ -62,15 +62,13 @@ export default function ProposalCard({
     }
   };
 
-  const handleArchive = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click
+  const handleArchive = () => {
     if (onArchive) {
       onArchive(proposal);
     }
   };
 
-  const handleMarkReady = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click
+  const handleMarkReady = () => {
     if (onMarkReady) {
       onMarkReady(proposal);
     }
@@ -134,7 +132,7 @@ export default function ProposalCard({
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-2">
+      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
         {proposal.status === 'draft' && onMarkReady && (
           <Button
             onClick={handleMarkReady}

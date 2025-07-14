@@ -10,9 +10,9 @@ import {
   Send, 
   Loader2, 
   MessageSquare, 
-  Sparkles,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  Bot
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -196,8 +196,8 @@ export default function ChatInterface({
 
   return (
     <div className={cn('flex flex-col h-full', className)}>
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
+      {/* Header - Fixed */}
+      <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-gray-200 bg-white">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
             <MessageSquare className="w-4 h-4 text-primary-600" />
@@ -221,15 +221,11 @@ export default function ChatInterface({
               New Chat
             </Button>
           )}
-          <div className="flex items-center px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs">
-            <Sparkles className="w-3 h-3 mr-1" />
-            Demo Mode
-          </div>
         </div>
       </div>
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {/* Messages Area - Scrollable */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="w-6 h-6 animate-spin text-primary mr-3" />
@@ -294,41 +290,43 @@ export default function ChatInterface({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Error Message */}
-      {error && (
-        <div className="p-3 mx-4 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-sm text-red-600">{error}</p>
-        </div>
-      )}
-
-      {/* Input Area */}
-      <div className="p-4 border-t border-gray-200 bg-white">
-        <form onSubmit={handleSubmit} className="flex gap-3">
-          <div className="flex-1 relative">
-            <textarea
-              ref={inputRef}
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask about stakeholders, challenges, solutions, or anything else..."
-              rows={1}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 bg-white placeholder-gray-500"
-              disabled={sending}
-            />
+      {/* Input Area - Fixed at bottom */}
+      <div className="flex-shrink-0 bg-white border-t border-gray-200">
+        {/* Error Message */}
+        {error && (
+          <div className="p-3 mx-4 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-sm text-red-600">{error}</p>
           </div>
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            disabled={!inputText.trim() || sending}
-            loading={sending}
-          >
-            <Send className="w-4 h-4" />
-          </Button>
-        </form>
-        <p className="text-xs text-gray-500 mt-2">
-          Press Enter to send, Shift+Enter for new line
-        </p>
+        )}
+        
+        <div className="p-4">
+          <form onSubmit={handleSubmit} className="flex gap-3">
+            <div className="flex-1 relative">
+              <textarea
+                ref={inputRef}
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask about stakeholders, challenges, solutions, or anything else..."
+                rows={1}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 bg-white placeholder-gray-500"
+                disabled={sending}
+              />
+            </div>
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              disabled={!inputText.trim() || sending}
+              loading={sending}
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </form>
+          <p className="text-xs text-gray-500 mt-2">
+            Press Enter to send, Shift+Enter for new line
+          </p>
+        </div>
       </div>
     </div>
   );

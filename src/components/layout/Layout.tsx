@@ -30,11 +30,11 @@ export default function Layout({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
       <main className={cn(
-        'mx-auto',
-        maxWidthClasses[maxWidth],
+        'flex-1',
+        maxWidth !== 'full' ? `mx-auto ${maxWidthClasses[maxWidth]}` : 'w-full',
         padding && 'px-4 sm:px-6 lg:px-8 py-6',
         className
       )}>
