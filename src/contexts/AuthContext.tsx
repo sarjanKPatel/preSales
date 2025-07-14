@@ -20,12 +20,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+    
+    // Only run auth logic on the client
+    if (typeof window === 'undefined') {
+      setLoading(false);
+      return;
+    }
+
+    let mounted = true;
+
     // Get initial session
     const getInitialSession = async () => {
       try {
         const { user: currentUser } = await auth.getCurrentUser();
+        if (!mounted) return;
+        
         setUser(currentUser);
         
         if (currentUser) {
@@ -43,7 +56,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error('Error getting initial session:', error);
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -51,6 +66,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Listen for auth changes
     const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+      
       setUser(session?.user || null);
       
       if (session?.user) {
@@ -71,43 +88,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    if (typeof window === 'undefined') {
+      return { error: new Error('Auth not available on server') };
+    }
+    
     setLoading(true);
     try {
       const { error } = await auth.signIn(email, password);
       return { error };
+    } catch (err) {
+      console.error('Sign in error:', err);
+      return { error: err };
     } finally {
       setLoading(false);
     }
   };
 
   const signUp = async (email: string, password: string, fullName?: string) => {
+    if (typeof window === 'undefined') {
+      return { error: new Error('Auth not available on server') };
+    }
+    
     setLoading(true);
     try {
       const { error } = await auth.signUp(email, password, fullName);
       return { error };
+    } catch (err) {
+      console.error('Sign up error:', err);
+      return { error: err };
     } finally {
       setLoading(false);
     }
   };
 
   const signOut = async () => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    
     setLoading(true);
     try {
       await auth.signOut();
+    } catch (err) {
+      console.error('Sign out error:', err);
     } finally {
       setLoading(false);
     }
   };
 
   const value: AuthContextType = {
-    user,
-    profile,
-    loading,
+    user: mounted ? user : null,
+    profile: mounted ? profile : null,
+    loading: mounted ? loading : true,
     signIn,
     signUp,
     signOut,
