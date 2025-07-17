@@ -65,12 +65,6 @@ export default function Header() {
               AI Testing
             </a>
             <a
-              href="/test-deep-research"
-              className="text-gray-600 hover:text-primary transition-colors font-medium"
-            >
-              Deep Research
-            </a>
-            <a
               href="/analytics"
               className="text-gray-600 hover:text-primary transition-colors font-medium"
             >
@@ -179,12 +173,6 @@ export default function Header() {
                 className="text-gray-600 hover:text-primary transition-colors font-medium px-2 py-1"
               >
                 AI Testing
-              </a>
-              <a
-                href="/test-deep-research"
-                className="text-gray-600 hover:text-primary transition-colors font-medium px-2 py-1"
-              >
-                Deep Research
               </a>
               <a
                 href="/analytics"

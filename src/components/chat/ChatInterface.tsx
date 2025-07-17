@@ -1,20 +1,21 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { ChatMessage, ChatSession } from '@/types';
-import { db } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
-import ChatMessageComponent from './ChatMessage';
-import Button from '@/components/Button';
-import { 
-  Send, 
-  Loader2, 
-  MessageSquare, 
+import React, { useState, useEffect, useRef } from "react";
+import { ChatMessage, ChatSession } from "@/types";
+import { db } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+import ChatMessageComponent from "./ChatMessage";
+import Button from "@/components/Button";
+import {
+  Send,
+  Loader2,
+  MessageSquare,
   Sparkles,
   AlertCircle,
-  RefreshCw
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+  RefreshCw,
+  Bot,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ChatInterfaceProps {
   proposalId: string;
@@ -34,15 +35,17 @@ export default function ChatInterface({
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [inputText, setInputText] = useState('');
-  const [currentSession, setCurrentSession] = useState<ChatSession | null>(session || null);
-  
+  const [inputText, setInputText] = useState("");
+  const [currentSession, setCurrentSession] = useState<ChatSession | null>(
+    session || null
+  );
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   // Load messages when session changes
@@ -61,14 +64,16 @@ export default function ChatInterface({
       setLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await db.getChatMessages(currentSession.id);
-      
+      const { data, error: fetchError } = await db.getChatMessages(
+        currentSession.id
+      );
+
       if (fetchError) throw fetchError;
-      
+
       setMessages(data || []);
     } catch (err) {
-      console.error('Error loading messages:', err);
-      setError('Failed to load chat messages');
+      console.error("Error loading messages:", err);
+      setError("Failed to load chat messages");
     } finally {
       setLoading(false);
     }
@@ -76,30 +81,32 @@ export default function ChatInterface({
 
   const createSession = async () => {
     if (!user) {
-      setError('Please sign in to start a chat');
+      setError("Please sign in to start a chat");
       return null;
     }
 
     try {
-      const { data, error: createError } = await db.createChatSession(proposalId);
-      
+      const { data, error: createError } = await db.createChatSession(
+        proposalId
+      );
+
       if (createError) throw createError;
-      
+
       setCurrentSession(data);
       onSessionCreated?.(data);
       return data;
     } catch (err) {
-      console.error('Error creating chat session:', err);
-      setError('Failed to create chat session');
+      console.error("Error creating chat session:", err);
+      setError("Failed to create chat session");
       return null;
     }
   };
 
   const sendMessage = async (content: string) => {
     if (!content.trim()) return;
-    
+
     let sessionToUse = currentSession;
-    
+
     // Create session if it doesn't exist
     if (!sessionToUse) {
       sessionToUse = await createSession();
@@ -113,46 +120,53 @@ export default function ChatInterface({
       // Add user message
       const userMessage = {
         session_id: sessionToUse.id,
-        role: 'user' as const,
+        role: "user" as const,
         content: content.trim(),
       };
 
-      const { data: userMsgData, error: userMsgError } = await db.addChatMessage(userMessage);
-      
+      const { data: userMsgData, error: userMsgError } =
+        await db.addChatMessage(userMessage);
+
       if (userMsgError) throw userMsgError;
-      
+
       // Update messages immediately
-      setMessages(prev => [...prev, userMsgData]);
-      setInputText('');
+      setMessages((prev) => [...prev, userMsgData]);
+      setInputText("");
 
-      // TODO: Integration with OpenAI will go here
-      // For now, we'll add a placeholder assistant response
-      setTimeout(async () => {
-        try {
-          const assistantMessage = {
-            session_id: sessionToUse.id,
-            role: 'assistant' as const,
-            content: `I understand you'd like help with: "${content.trim()}"\n\nI'm ready to assist you with your proposal, but I need to be connected to OpenAI first. Once that's set up, I'll be able to:\n\n• Analyze your requirements\n• Generate proposal sections\n• Provide strategic insights\n• Suggest improvements\n\nFor now, I can help you organize your thoughts manually!`,
-            metadata: {
-              confidence: 0.95,
-              timestamp: new Date().toISOString(),
-              ready_for_ai: true,
-            },
-          };
+      // Call the AI API
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: content.trim(),
+          sessionId: sessionToUse.id,
+          proposalContext: {
+            proposalId,
+            // Add any other context that might be helpful
+          },
+        }),
+      });
 
-          const { data: assistantMsgData, error: assistantMsgError } = await db.addChatMessage(assistantMessage);
-          
-          if (assistantMsgError) throw assistantMsgError;
-          
-          setMessages(prev => [...prev, assistantMsgData]);
-        } catch (err) {
-          console.error('Error adding assistant message:', err);
-        }
-      }, 1000);
+      const data = await response.json();
 
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to get AI response");
+      }
+
+      // The API already saved the assistant message, so just update local state
+      const assistantMessage = {
+        id: Date.now().toString(), // Temporary ID
+        session_id: sessionToUse.id,
+        role: "assistant" as const,
+        content: data.message,
+        metadata: data.metadata,
+        created_at: new Date().toISOString(),
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
     } catch (err) {
-      console.error('Error sending message:', err);
-      setError('Failed to send message');
+      console.error("Error sending message:", err);
+      setError("Failed to send message");
     } finally {
       setSending(false);
     }
@@ -166,7 +180,7 @@ export default function ChatInterface({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
     }
@@ -182,7 +196,12 @@ export default function ChatInterface({
 
   if (!user) {
     return (
-      <div className={cn('flex flex-col items-center justify-center py-12', className)}>
+      <div
+        className={cn(
+          "flex flex-col items-center justify-center py-12",
+          className
+        )}
+      >
         <AlertCircle className="w-12 h-12 text-gray-400 mb-4" />
         <h3 className="text-lg font-medium text-gray-900 mb-2">
           Authentication Required
@@ -195,7 +214,7 @@ export default function ChatInterface({
   }
 
   return (
-    <div className={cn('flex flex-col h-full', className)}>
+    <div className={cn("flex flex-col h-full", className)}>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
         <div className="flex items-center gap-3">
@@ -205,25 +224,23 @@ export default function ChatInterface({
           <div>
             <h3 className="font-medium text-gray-900">AI Assistant</h3>
             <p className="text-sm text-gray-500">
-              {currentSession ? 'Ready to help with your proposal' : 'Start a conversation'}
+              {currentSession
+                ? "Ready to help with your proposal"
+                : "Start a conversation"}
             </p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {currentSession && (
-            <Button
-              onClick={startNewChat}
-              variant="ghost"
-              size="sm"
-            >
+            <Button onClick={startNewChat} variant="ghost" size="sm">
               <RefreshCw className="w-4 h-4 mr-2" />
               New Chat
             </Button>
           )}
-          <div className="flex items-center px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs">
+          <div className="flex items-center px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
             <Sparkles className="w-3 h-3 mr-1" />
-            Demo Mode
+            AI Active
           </div>
         </div>
       </div>
@@ -244,23 +261,34 @@ export default function ChatInterface({
               Start a conversation
             </h3>
             <p className="text-gray-600 mb-6 max-w-md">
-              Tell me about your proposal needs, challenges, or goals. I'm here to help you create compelling sales proposals.
+              Tell me about your proposal needs, challenges, or goals. I&apos;m
+              here to help you create compelling sales proposals.
             </p>
             <div className="grid grid-cols-1 gap-2 text-sm text-left w-full max-w-md">
               <button
-                onClick={() => setInputText('Help me identify key stakeholders for this proposal')}
+                onClick={() =>
+                  setInputText(
+                    "Help me identify key stakeholders for this proposal"
+                  )
+                }
                 className="p-3 text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left"
               >
                 💼 Help me identify key stakeholders for this proposal
               </button>
               <button
-                onClick={() => setInputText('What challenges might this client be facing?')}
+                onClick={() =>
+                  setInputText("What challenges might this client be facing?")
+                }
                 className="p-3 text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left"
               >
                 🎯 What challenges might this client be facing?
               </button>
               <button
-                onClick={() => setInputText('Generate an executive summary for this proposal')}
+                onClick={() =>
+                  setInputText(
+                    "Generate an executive summary for this proposal"
+                  )
+                }
                 className="p-3 text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left"
               >
                 📝 Generate an executive summary for this proposal
