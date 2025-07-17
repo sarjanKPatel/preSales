@@ -6,36 +6,78 @@ function createSSEMessage(data: Record<string, unknown>): string {
   return `data: ${JSON.stringify(data)}\n\n`;
 }
 
+// Timeout wrapper
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error("OpenAI request timed out")),
+      ms
+    );
+    promise.then(
+      (val) => {
+        clearTimeout(timer);
+        resolve(val);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
+}
+
 export async function POST(request: NextRequest) {
   const encoder = new TextEncoder();
+  let writer: WritableStreamDefaultWriter | null = null;
+  let stream: TransformStream | null = null;
 
   try {
     const body = await request.json();
-    const { company, requirements } = body;
+    const { company, industry = "", useCase = "", requirements = "" } = body;
 
-    // Create a TransformStream for SSE
-    const stream = new TransformStream();
-    const writer = stream.writable.getWriter();
+    stream = new TransformStream();
+    writer = stream.writable.getWriter();
 
-    // Start the research in the background
-    (async () => {
-      try {
-        // Send initial progress
-        await writer.write(
-          encoder.encode(
-            createSSEMessage({
-              type: "progress",
-              status: "initializing",
-              message: `Starting Deep Research for ${company}...`,
-              searchCount: 0,
-              pagesRead: 0,
-            })
-          )
-        );
+    // Helper to send progress
+    async function sendProgress(
+      status: string,
+      message: string,
+      modelUsed: string
+    ) {
+      await writer!.write(
+        encoder.encode(
+          createSSEMessage({
+            type: "progress",
+            status,
+            message,
+            metadata: {
+              modelUsed,
+              timestamp: new Date().toISOString(),
+              company,
+              industry,
+              useCase,
+            },
+          })
+        )
+      );
+    }
 
-        // Build the research input
-        const researchInput = `
+    await sendProgress(
+      "started",
+      `Starting Deep Research for ${company}...`,
+      "pending"
+    );
+    await sendProgress(
+      "researching",
+      `Attempting to use Deep Research model...`,
+      "o3-deep-research"
+    );
+
+    // Build research input
+    const researchInput = `
 Company: ${company}
+Industry: ${industry}
+Use Case: ${useCase}
 
 Research Requirements:
 ${
@@ -43,175 +85,126 @@ ${
   "Provide comprehensive company analysis including recent news, leadership, technology, and opportunities."
 }
 
-Please provide:
-1. Company overview with latest information
-2. Recent news and developments (focus on 2024-2025)
-3. Current leadership team with actual names and titles
-4. Technology stack and digital infrastructure
-5. Business challenges and pain points
-6. Opportunities for AI/automation solutions
-7. Specific recommendations for engagement
-
-Include specific facts, figures, and recent events. Cite sources where possible.
+Please provide the following sections:
+1. Company Overview
+2. Industry Analysis
+3. Use Case Fit
+4. Implementation Strategy
+5. ROI Estimation
+6. Risk Assessment
+7. Competitive Advantage
+8. Recommendations
 `;
 
-        try {
-          // Use the RESPONSES API for Deep Research
-          const response = await openai.responses.create({
-            model: "o3-deep-research",
-            input: researchInput,
-            tools: [
-              { type: "web_search_preview" },
-              { type: "code_interpreter", container: { type: "auto" } },
-            ],
-          });
+    let modelUsed = "o3-deep-research";
+    let responseData: any = null;
+    let fallback = false;
 
-          // Track progress by monitoring the output array
-          let searchCount = 0;
-          const pagesRead = 0;
+    try {
+      // Try Deep Research model with timeout
+      const response = await withTimeout(
+        openai.responses.create({
+          model: "o3-deep-research",
+          input: researchInput,
+          tools: [
+            { type: "web_search_preview" },
+            { type: "code_interpreter", container: { type: "auto" } },
+          ],
+        }),
+        60000
+      );
 
-          // Process intermediate steps
-          for (const item of response.output) {
-            if (item.type === "web_search_call") {
-              searchCount++;
-              await writer.write(
-                encoder.encode(
-                  createSSEMessage({
-                    type: "progress",
-                    status: "searching",
-                    message: `Performing web search...`,
-                    searchCount,
-                    pagesRead,
-                  })
-                )
-              );
-            } else if (item.type === "code_interpreter_call") {
-              await writer.write(
-                encoder.encode(
-                  createSSEMessage({
-                    type: "progress",
-                    status: "analyzing",
-                    message: "Analyzing data...",
-                    searchCount,
-                    pagesRead,
-                  })
-                )
-              );
-            }
-          }
-
-          // Get the final message
-          const finalMessage = response.output.find(
-            (item) => item.type === "message"
-          );
-          const finalText =
-            finalMessage?.content?.[0] && "text" in finalMessage.content[0]
-              ? finalMessage.content[0].text
-              : "";
-          const annotations =
-            finalMessage?.content?.[0] &&
-            "annotations" in finalMessage.content[0]
-              ? finalMessage.content[0].annotations
-              : [];
-
-          // Parse the response into structured format
-          const structuredResults = parseDeepResearchResponse(finalText, {
-            company,
-            searchCount,
-            pagesRead,
-            model: "o3-deep-research",
-            annotations,
-          });
-
-          // Send completion
-          await writer.write(
-            encoder.encode(
-              createSSEMessage({
-                type: "complete",
-                results: structuredResults,
-              })
-            )
-          );
-        } catch (apiError: unknown) {
-          console.error("Deep Research API error:", apiError);
-
-          // Check if it's a model availability issue
-          const error = apiError as { code?: string; status?: number };
-          if (error.code === "model_not_found" || error.status === 404) {
-            // Fallback to GPT-4
-            await writer.write(
-              encoder.encode(
-                createSSEMessage({
-                  type: "progress",
-                  status: "fallback",
-                  message:
-                    "Deep Research model not available in your region/account. Using GPT-4 instead.",
-                })
-              )
-            );
-
-            // Use standard chat completions as fallback
-            const fallbackResponse = await openai.chat.completions.create({
-              model: "gpt-4-turbo-preview",
-              messages: [
-                {
-                  role: "system",
-                  content:
-                    "You are a business research analyst. Provide detailed analysis based on your training data. Be clear when information might be outdated.",
-                },
-                {
-                  role: "user",
-                  content: researchInput,
-                },
-              ],
-              temperature: 0.3,
-              max_tokens: 4000,
-            });
-
-            const structuredResults = parseDeepResearchResponse(
-              fallbackResponse.choices[0].message.content || "",
+      // Parse Deep Research response
+      responseData = parseDeepResearchResponse(response, {
+        company,
+        industry,
+        useCase,
+        modelUsed,
+      });
+    } catch (err: any) {
+      // Fallback to GPT-4 Turbo
+      fallback = true;
+      modelUsed = "gpt-4-turbo-preview";
+      await sendProgress(
+        "fallback",
+        "Deep Research model not available or timed out. Using GPT-4 Turbo as fallback...",
+        modelUsed
+      );
+      try {
+        const fallbackResponse = await withTimeout(
+          openai.chat.completions.create({
+            model: modelUsed,
+            messages: [
               {
-                company,
-                searchCount: 0,
-                pagesRead: 0,
-                model: "gpt-4-turbo-preview",
-                note: "Deep Research not available. Using GPT-4 knowledge base (training data up to April 2024).",
-                annotations: [],
-              }
-            );
-
-            await writer.write(
-              encoder.encode(
-                createSSEMessage({
-                  type: "complete",
-                  results: structuredResults,
-                })
-              )
-            );
-          } else {
-            throw apiError;
-          }
-        }
-      } catch (error: unknown) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Research failed";
-        const errorDetails =
-          error instanceof Error ? error.toString() : String(error);
-
-        await writer.write(
+                role: "system",
+                content:
+                  "You are a business research analyst. Provide detailed, structured analysis based on your knowledge. Note when information might be outdated.",
+              },
+              {
+                role: "user",
+                content: researchInput,
+              },
+            ],
+            temperature: 0.3,
+            max_tokens: 4000,
+          }),
+          60000
+        );
+        responseData = parseGPT4Response(fallbackResponse, {
+          company,
+          industry,
+          useCase,
+          modelUsed,
+        });
+      } catch (fallbackErr: any) {
+        // Both models failed
+        await writer!.write(
           encoder.encode(
             createSSEMessage({
               type: "error",
-              message: errorMessage,
-              details: errorDetails,
+              message:
+                fallbackErr.message ||
+                "Both Deep Research and GPT-4 Turbo failed",
+              details: fallbackErr.stack || String(fallbackErr),
+              metadata: {
+                modelUsed,
+                timestamp: new Date().toISOString(),
+                company,
+                industry,
+                useCase,
+              },
             })
           )
         );
-      } finally {
-        await writer.close();
+        await writer!.close();
+        return new Response(stream.readable, {
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            Connection: "keep-alive",
+          },
+        });
       }
-    })();
+    }
 
+    // Send complete event
+    await writer!.write(
+      encoder.encode(
+        createSSEMessage({
+          type: "complete",
+          results: responseData,
+          metadata: {
+            modelUsed,
+            timestamp: new Date().toISOString(),
+            company,
+            industry,
+            useCase,
+            fallback,
+          },
+        })
+      )
+    );
+    await writer!.close();
     return new Response(stream.readable, {
       headers: {
         "Content-Type": "text/event-stream",
@@ -219,192 +212,83 @@ Include specific facts, figures, and recent events. Cite sources where possible.
         Connection: "keep-alive",
       },
     });
-  } catch (error: unknown) {
-    console.error("Deep research error:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Failed to start research";
-    const errorDetails =
-      error instanceof Error ? error.toString() : String(error);
-
-    return new Response(
-      JSON.stringify({
-        error: errorMessage,
-        details: errorDetails,
-      }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+  } catch (error: any) {
+    // Top-level error
+    if (writer) {
+      await writer.write(
+        new TextEncoder().encode(
+          createSSEMessage({
+            type: "error",
+            message: error.message || "Unknown error in Deep Research API",
+            details: error.stack || String(error),
+            metadata: {
+              timestamp: new Date().toISOString(),
+            },
+          })
+        )
+      );
+      await writer.close();
+    }
+    return new Response(stream?.readable ?? null, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
+      status: 500,
+    });
   }
 }
 
-// Enhanced parsing function that handles citations
-function parseDeepResearchResponse(
-  content: string,
-  metadata: {
-    company: string;
-    searchCount: number;
-    pagesRead: number;
-    model: string;
-    annotations?: Array<{
-      title: string;
-      url: string;
-      start_index?: number;
-      end_index?: number;
-    }>;
-    note?: string;
-  }
-): {
-  companyOverview: string;
-  recentDevelopments: string[];
-  keyStakeholders: Array<{ name: string; role: string }>;
-  technologyStack: string[];
-  challenges: string[];
-  opportunities: string[];
-  recommendations: string[];
-  citations: Array<{ title: string; url: string }>;
-  fullReport: string;
-  metadata: {
-    company: string;
-    searchCount: number;
-    pagesRead: number;
-    model: string;
-    annotations?: Array<{
-      title: string;
-      url: string;
-      start_index?: number;
-      end_index?: number;
-    }>;
-    note?: string;
-    timestamp: string;
-  };
-} {
-  // Extract sections using improved parsing
-  const sections = {
-    companyOverview: "",
-    recentDevelopments: [] as string[],
-    keyStakeholders: [] as Array<{ name: string; role: string }>,
-    technologyStack: [] as string[],
-    challenges: [] as string[],
-    opportunities: [] as string[],
-    recommendations: [] as string[],
-    citations: [] as Array<{ title: string; url: string }>,
-  };
+// --- Parsing Functions ---
 
-  // Split content into lines for parsing
-  const lines = content.split("\n");
-  let currentSection = "";
+function parseDeepResearchResponse(response: any, meta: any) {
+  // The Responses API returns an output array with a final message
+  const output = response.output || [];
+  const messageObj = output.find((item: any) => item.type === "message");
+  const text = messageObj?.content?.[0]?.text || "";
+  return parseSections(text, meta, "o3-deep-research");
+}
 
-  for (const line of lines) {
-    const trimmedLine = line.trim();
+function parseGPT4Response(response: any, meta: any) {
+  const text = response.choices?.[0]?.message?.content || "";
+  return parseSections(text, meta, "gpt-4-turbo-preview");
+}
 
-    // Detect section headers
-    if (trimmedLine.match(/company overview|executive summary/i)) {
-      currentSection = "overview";
-    } else if (
-      trimmedLine.match(/recent news|recent developments|latest news/i)
-    ) {
-      currentSection = "developments";
-    } else if (
-      trimmedLine.match(/leadership|executives|key stakeholders|team/i)
-    ) {
-      currentSection = "stakeholders";
-    } else if (trimmedLine.match(/technology|tech stack|infrastructure/i)) {
-      currentSection = "technology";
-    } else if (trimmedLine.match(/challenges|pain points|issues/i)) {
-      currentSection = "challenges";
-    } else if (trimmedLine.match(/opportunities|recommendations|engagement/i)) {
-      currentSection = "opportunities";
-    }
-
-    // Parse content based on current section
-    if (trimmedLine && !trimmedLine.match(/^#|^\*\*.*\*\*$/)) {
-      switch (currentSection) {
-        case "overview":
-          sections.companyOverview += line + "\n";
-          break;
-
-        case "developments":
-          if (trimmedLine.match(/^[-•*]|^\d+\./)) {
-            sections.recentDevelopments.push(
-              trimmedLine.replace(/^[-•*]\s*|\d+\.\s*/, "").trim()
-            );
-          }
-          break;
-
-        case "stakeholders":
-          // Parse "Name - Title" or "Name: Title" patterns
-          const stakeholderMatch = trimmedLine.match(
-            /^[-•*]?\s*([^-:]+)\s*[-:]\s*(.+)$/
-          );
-          if (stakeholderMatch) {
-            sections.keyStakeholders.push({
-              name: stakeholderMatch[1].trim(),
-              role: stakeholderMatch[2].trim(),
-            });
-          }
-          break;
-
-        case "technology":
-          if (trimmedLine.match(/^[-•*]|^\d+\./)) {
-            sections.technologyStack.push(
-              trimmedLine.replace(/^[-•*]\s*|\d+\.\s*/, "").trim()
-            );
-          }
-          break;
-
-        case "challenges":
-          if (trimmedLine.match(/^[-•*]|^\d+\./)) {
-            sections.challenges.push(
-              trimmedLine.replace(/^[-•*]\s*|\d+\.\s*/, "").trim()
-            );
-          }
-          break;
-
-        case "opportunities":
-          if (trimmedLine.match(/^[-•*]|^\d+\./)) {
-            sections.recommendations.push(
-              trimmedLine.replace(/^[-•*]\s*|\d+\.\s*/, "").trim()
-            );
-          }
-          break;
-      }
+function parseSections(text: string, meta: any, model: string) {
+  // Extract 8 sections by headers
+  const sectionHeaders = [
+    "Company Overview",
+    "Industry Analysis",
+    "Use Case Fit",
+    "Implementation Strategy",
+    "ROI Estimation",
+    "Risk Assessment",
+    "Competitive Advantage",
+    "Recommendations",
+  ];
+  const result: Record<string, string> = {};
+  let current = "";
+  let buffer: string[] = [];
+  for (const line of text.split("\n")) {
+    const header = sectionHeaders.find((h) =>
+      line.trim().toLowerCase().startsWith(h.toLowerCase())
+    );
+    if (header) {
+      if (current) result[current] = buffer.join("\n").trim();
+      current = header;
+      buffer = [];
+    } else if (current) {
+      buffer.push(line);
     }
   }
-
-  // Extract citations if present
-  const citationMatches = content.match(/\[([^\]]+)\]\(([^)]+)\)/g);
-  if (citationMatches) {
-    citationMatches.forEach((match) => {
-      const [, title, url] = match.match(/\[([^\]]+)\]\(([^)]+)\)/) || [];
-      if (title && url) {
-        sections.citations.push({ title, url });
-      }
-    });
-  }
-
-  // Add citations from annotations
-  const citations =
-    metadata.annotations?.map((ann) => ({
-      title: ann.title,
-      url: ann.url,
-      startIndex: ann.start_index,
-      endIndex: ann.end_index,
-    })) || [];
-
+  if (current) result[current] = buffer.join("\n").trim();
   return {
-    companyOverview: sections.companyOverview,
-    recentDevelopments: sections.recentDevelopments,
-    keyStakeholders: sections.keyStakeholders,
-    technologyStack: sections.technologyStack,
-    challenges: sections.challenges,
-    opportunities: sections.opportunities,
-    recommendations: sections.recommendations,
-    citations: [...sections.citations, ...citations],
-    fullReport: content,
+    ...result,
+    fullText: text,
     metadata: {
-      ...metadata,
+      ...meta,
+      modelUsed: model,
       timestamp: new Date().toISOString(),
     },
   };
