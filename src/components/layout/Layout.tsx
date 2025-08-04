@@ -30,10 +30,11 @@ export default function Layout({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen flex flex-col relative overflow-hidden">
+      <div className="gradient-bg" />
       <Header />
       <main className={cn(
-        'flex-1',
+        'flex-1 relative z-10',
         maxWidth !== 'full' ? `mx-auto ${maxWidthClasses[maxWidth]}` : 'w-full',
         padding && 'px-4 sm:px-6 lg:px-8 py-6',
         className

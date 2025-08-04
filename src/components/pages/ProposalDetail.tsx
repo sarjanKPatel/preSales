@@ -7,7 +7,7 @@ import { db, supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/layout/Layout';
 import SectionManager from '@/components/sections/SectionManager';
-import ChatInterface from '@/components/chat/ChatInterface';
+import { ProposalChatLayout } from '@/components/chat';
 import Button from '@/components/Button';
 import { 
   ArrowLeft, 
@@ -280,15 +280,9 @@ export default function ProposalDetailPage() {
             minWidth: chatWidth > 0 ? '280px' : undefined
           }}
         >
-          <ChatInterface
-            proposalId={proposal.id}
-            session={currentChatSession}
-            onSessionCreated={(session) => {
-              setProposal(prev => prev ? {
-                ...prev,
-                chat_sessions: [session, ...(prev.chat_sessions || [])]
-              } : null);
-            }}
+          <ProposalChatLayout
+            entityId={proposal.id}
+            entityName={proposal.title}
             className="h-full"
           />
         </div>

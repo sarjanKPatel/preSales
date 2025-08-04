@@ -62,6 +62,7 @@ export interface ButtonProps {
   onClick?: () => void;
   className?: string;
   type?: 'button' | 'submit' | 'reset';
+  icon?: React.ReactNode;
 }
 
 export interface CardProps {

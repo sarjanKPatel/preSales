@@ -36,7 +36,7 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-50 backdrop-blur-sm bg-white/95">
+    <header className="glass-heavy sticky top-0 z-50 border-b border-white/20">
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -53,22 +53,28 @@ export default function Header() {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             <a 
+              href="/vision" 
+              className="text-gray-600 hover:text-primary transition-colors font-medium"
+            >
+              Company Vision
+            </a>
+            <a 
+              href="/leads" 
+              className="text-gray-600 hover:text-primary transition-colors font-medium"
+            >
+              Lead Information
+            </a>
+            <a 
               href="/proposals" 
               className="text-gray-600 hover:text-primary transition-colors font-medium"
             >
               Proposals
             </a>
             <a 
-              href="/analytics" 
+              href="/chat" 
               className="text-gray-600 hover:text-primary transition-colors font-medium"
             >
-              Analytics
-            </a>
-            <a 
-              href="/templates" 
-              className="text-gray-600 hover:text-primary transition-colors font-medium"
-            >
-              Templates
+              AI Chat
             </a>
           </nav>
 
@@ -78,7 +84,7 @@ export default function Header() {
               <div className="relative">
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="flex items-center space-x-3 p-2 rounded-lg glass hover:bg-white/20 transition-all"
                 >
                   <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
                     <User className="w-4 h-4 text-primary-600" />
@@ -96,7 +102,7 @@ export default function Header() {
 
                 {/* Dropdown Menu */}
                 {showUserMenu && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                  <div className="absolute right-0 mt-2 w-48 glass-heavy rounded-lg shadow-lg py-1 z-50">
                     <div className="px-4 py-2 border-b border-gray-100">
                       <div className="text-sm font-medium text-gray-900">
                         {profile?.full_name || 'User'}
@@ -105,21 +111,21 @@ export default function Header() {
                     </div>
                     <a
                       href="/profile"
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-white/20 transition-all"
                     >
                       <User className="w-4 h-4 mr-3" />
                       Profile
                     </a>
                     <a
                       href="/settings"
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-white/20 transition-all"
                     >
                       <Settings className="w-4 h-4 mr-3" />
                       Settings
                     </a>
                     <button
                       onClick={handleSignOut}
-                      className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                      className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50/50 transition-all"
                     >
                       <LogOut className="w-4 h-4 mr-3" />
                       Sign Out
@@ -141,7 +147,7 @@ export default function Header() {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className="md:hidden p-2 rounded-lg hover:bg-gray-100"
+              className="md:hidden p-2 rounded-lg glass hover:bg-white/20 transition-all"
             >
               {showMobileMenu ? (
                 <X className="w-5 h-5 text-gray-600" />
@@ -154,8 +160,20 @@ export default function Header() {
 
         {/* Mobile Menu */}
         {showMobileMenu && (
-          <div className="md:hidden border-t border-gray-200 py-4">
+          <div className="md:hidden border-t border-white/20 py-4 glass">
             <nav className="flex flex-col space-y-3">
+              <a 
+                href="/vision" 
+                className="text-gray-600 hover:text-primary transition-colors font-medium px-2 py-1"
+              >
+                Company Vision
+              </a>
+              <a 
+                href="/leads" 
+                className="text-gray-600 hover:text-primary transition-colors font-medium px-2 py-1"
+              >
+                Lead Information
+              </a>
               <a 
                 href="/proposals" 
                 className="text-gray-600 hover:text-primary transition-colors font-medium px-2 py-1"
@@ -163,16 +181,10 @@ export default function Header() {
                 Proposals
               </a>
               <a 
-                href="/analytics" 
+                href="/chat" 
                 className="text-gray-600 hover:text-primary transition-colors font-medium px-2 py-1"
               >
-                Analytics
-              </a>
-              <a 
-                href="/templates" 
-                className="text-gray-600 hover:text-primary transition-colors font-medium px-2 py-1"
-              >
-                Templates
+                AI Chat
               </a>
             </nav>
           </div>

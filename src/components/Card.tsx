@@ -25,7 +25,7 @@ const Card: React.FC<CardProps> = ({
   };
 
   const classes = cn(
-    'bg-white rounded-lg border border-gray-200',
+    'glass-card rounded-xl overflow-hidden transition-all duration-300 hover:scale-[1.02]',
     paddingClasses[padding],
     shadowClasses[shadow],
     className

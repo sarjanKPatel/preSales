@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { db } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import Button from '@/components/Button';
 import { X, Building2, DollarSign, FileText, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useCreateProposal, useCreateProposalSection } from '@/database/proposals/hooks';
 
 interface CreateProposalModalProps {
   isOpen: boolean;
@@ -19,81 +18,74 @@ export default function CreateProposalModal({
   onSuccess,
 }: CreateProposalModalProps) {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     company_name: '',
     description: '',
     amount: '',
   });
+  
+  const { createProposal, loading, error } = useCreateProposal();
+  const { createSection } = useCreateProposalSection();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!user) {
-      setError('Please sign in to create a proposal');
       return;
     }
 
     if (!formData.title.trim() || !formData.company_name.trim()) {
-      setError('Title and company name are required');
       return;
     }
 
     try {
-      setLoading(true);
-      setError(null);
-
       const proposalData = {
         title: formData.title.trim(),
         company_name: formData.company_name.trim(),
         description: formData.description.trim() || undefined,
         amount: formData.amount ? parseFloat(formData.amount) : undefined,
+        status: 'draft' as const,
       };
 
-      const { data, error: createError } = await db.createProposal(proposalData);
+      const proposal = await createProposal(proposalData);
       
-      if (createError) {
-        throw createError;
-      }
-
-      if (!data) {
-        throw new Error('Failed to create proposal');
+      if (!proposal) {
+        return;
       }
 
       // Create default sections
       const defaultSections = [
         {
-          proposal_id: data.id,
+          proposal_id: proposal.id,
           section_title: 'Company Overview',
           section_type: 'overview',
           content: { text: '' },
           order_index: 1,
         },
         {
-          proposal_id: data.id,
+          proposal_id: proposal.id,
           section_title: 'Stakeholder Mapping',
           section_type: 'stakeholders',
           content: { stakeholders: [] },
           order_index: 2,
         },
         {
-          proposal_id: data.id,
+          proposal_id: proposal.id,
           section_title: 'Challenges & Pain Points',
           section_type: 'challenges',
           content: { challenges: [] },
           order_index: 3,
         },
         {
-          proposal_id: data.id,
+          proposal_id: proposal.id,
           section_title: 'Proposed Solution',
           section_type: 'solution',
           content: { solutions: [] },
           order_index: 4,
         },
         {
-          proposal_id: data.id,
+          proposal_id: proposal.id,
           section_title: 'Expected ROI',
           section_type: 'roi',
           content: { metrics: [] },
@@ -103,7 +95,7 @@ export default function CreateProposalModal({
 
       // Create sections
       for (const section of defaultSections) {
-        await db.addSection(section);
+        await createSection(section);
       }
 
       // Reset form
@@ -114,19 +106,15 @@ export default function CreateProposalModal({
         amount: '',
       });
 
-      onSuccess?.(data.id);
+      onSuccess?.(proposal.id);
       onClose();
     } catch (err) {
       console.error('Error creating proposal:', err);
-      setError(err instanceof Error ? err.message : 'Failed to create proposal');
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    if (error) setError(null);
   };
 
   if (!isOpen) return null;

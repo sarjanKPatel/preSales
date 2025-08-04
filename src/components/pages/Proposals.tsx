@@ -15,6 +15,10 @@ export default function ProposalsPage() {
     setShowCreateModal(true);
   };
 
+  const handleChatAssist = () => {
+    router.push('/chat?type=proposal');
+  };
+
   const handleProposalCreated = (proposalId: string) => {
     setShowCreateModal(false);
     router.push(`/proposals/${proposalId}`);
@@ -28,6 +32,7 @@ export default function ProposalsPage() {
     <Layout maxWidth="full">
       <ProposalList
         onCreateProposal={handleCreateProposal}
+        onChatAssist={handleChatAssist}
         onOpenProposal={handleOpenProposal}
       />
 

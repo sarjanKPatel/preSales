@@ -11,16 +11,17 @@ const Button: React.FC<ButtonProps> = ({
   onClick,
   className,
   type = 'button',
+  icon,
   ...props
 }) => {
-  const baseClasses = 'inline-flex items-center justify-center rounded-lg font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed shadow-sm';
+  const baseClasses = 'inline-flex items-center justify-center rounded-xl font-semibold transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed backdrop-filter';
 
   const variantClasses = {
-    primary: 'bg-primary text-white hover:bg-primary-600 hover:shadow-md active:bg-primary-700 focus:ring-primary/30',
-    secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200 hover:shadow-md active:bg-gray-300 focus:ring-gray-400/30',
-    outline: 'border-2 border-primary text-primary bg-transparent hover:bg-primary hover:text-white hover:shadow-md active:bg-primary-600 focus:ring-primary/30',
-    ghost: 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 active:bg-gray-200 focus:ring-gray-400/30',
-    destructive: 'bg-danger text-white hover:bg-red-600 hover:shadow-md active:bg-red-700 focus:ring-red-500/30',
+    primary: 'btn-glass-primary',
+    secondary: 'glass bg-white/70 text-gray-900 hover:bg-white/90 border-white/30',
+    outline: 'glass border-2 border-primary/50 text-primary hover:bg-primary/10 hover:border-primary/70',
+    ghost: 'text-gray-600 hover:bg-white/30 hover:backdrop-blur-md',
+    destructive: 'glass bg-red-500/80 text-white hover:bg-red-500/90 border-red-300/30',
   };
 
   const sizeClasses = {
@@ -44,7 +45,7 @@ const Button: React.FC<ButtonProps> = ({
       onClick={onClick}
       {...props}
     >
-      {loading && (
+      {loading ? (
         <svg
           className="mr-2 h-4 w-4 animate-spin"
           xmlns="http://www.w3.org/2000/svg"
@@ -65,6 +66,10 @@ const Button: React.FC<ButtonProps> = ({
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
           />
         </svg>
+      ) : icon && (
+        <span className="mr-2">
+          {icon}
+        </span>
       )}
       {children}
     </button>

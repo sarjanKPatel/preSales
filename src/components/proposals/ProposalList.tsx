@@ -1,8 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Proposal } from '@/types';
-import { db } from '@/lib/supabase';
+import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import ProposalCard from './ProposalCard';
 import Button from '@/components/Button';
@@ -12,81 +10,49 @@ import {
   Filter, 
   Loader2,
   FileText,
-  AlertCircle
+  AlertCircle,
+  MessageSquare
 } from 'lucide-react';
+import { useProposals, useProposalStats, useUpdateProposal } from '@/database/proposals/hooks';
+import type { Proposal } from '@/database/shared/types';
 
 interface ProposalListProps {
   onCreateProposal?: () => void;
+  onChatAssist?: () => void;
   onOpenProposal?: (proposal: Proposal) => void;
 }
 
 export default function ProposalList({
   onCreateProposal,
+  onChatAssist,
   onOpenProposal,
 }: ProposalListProps) {
   const { user } = useAuth();
-  const [proposals, setProposals] = useState<Proposal[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'ready' | 'archived'>('all');
-
-  // Fetch proposals
-  useEffect(() => {
-    if (!user) return;
-    
-    const fetchProposals = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const { data, error: fetchError } = await db.getProposals();
-        
-        if (fetchError) {
-          throw fetchError;
-        }
-        
-        setProposals(data || []);
-      } catch (err) {
-        console.error('Error fetching proposals:', err);
-        setError('Failed to load proposals');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProposals();
-  }, [user]);
-
-  // Filter proposals
-  const filteredProposals = proposals.filter(proposal => {
-    const matchesSearch = 
-      proposal.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      proposal.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (proposal.description?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
-
-    const matchesStatus = statusFilter === 'all' || proposal.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
+  
+  // Fetch proposals using database hooks
+  const { proposals, loading, error, refresh } = useProposals({
+    search: searchTerm || undefined,
+    status: statusFilter === 'all' ? undefined : statusFilter,
+    limit: 100
   });
+  
+  const { stats } = useProposalStats();
+  const { updateProposal } = useUpdateProposal();
+
+
+  // Proposals are already filtered by the hook based on search and status
+  const filteredProposals = proposals || [];
 
   const handleArchiveProposal = async (proposal: Proposal) => {
     try {
-      const { data, error } = await db.updateProposal(proposal.id, {
-        status: 'archived',
-        updated_at: new Date().toISOString()
+      await updateProposal(proposal.id, {
+        status: 'archived'
       });
       
-      if (error) {
-        throw error;
-      }
-      
-      // Update local state
-      setProposals(prev => prev.map(p => 
-        p.id === proposal.id 
-          ? { ...p, status: 'archived' as const, updated_at: data.updated_at }
-          : p
-      ));
+      // Refresh the list to show updated data
+      refresh();
     } catch (err) {
       console.error('Error archiving proposal:', err);
       alert('Failed to archive proposal');
@@ -95,21 +61,12 @@ export default function ProposalList({
 
   const handleMarkReady = async (proposal: Proposal) => {
     try {
-      const { data, error } = await db.updateProposal(proposal.id, {
-        status: 'ready',
-        updated_at: new Date().toISOString()
+      await updateProposal(proposal.id, {
+        status: 'ready'
       });
       
-      if (error) {
-        throw error;
-      }
-      
-      // Update local state
-      setProposals(prev => prev.map(p => 
-        p.id === proposal.id 
-          ? { ...p, status: 'ready' as const, updated_at: data.updated_at }
-          : p
-      ));
+      // Refresh the list to show updated data
+      refresh();
     } catch (err) {
       console.error('Error marking proposal as ready:', err);
       alert('Failed to mark proposal as ready');
@@ -148,7 +105,7 @@ export default function ProposalList({
         </h3>
         <p className="text-gray-600 mb-4">{error}</p>
         <Button 
-          onClick={() => window.location.reload()}
+          onClick={refresh}
           variant="outline"
         >
           Try Again
@@ -167,15 +124,28 @@ export default function ProposalList({
             Manage and track your sales proposals
           </p>
         </div>
-        <Button
-          onClick={onCreateProposal}
-          variant="primary"
-          size="lg"
-          className="flex items-center shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Create Proposal
-        </Button>
+        <div className="flex gap-3">
+          {onChatAssist && (
+            <Button
+              onClick={onChatAssist}
+              variant="secondary"
+              size="lg"
+              className="flex items-center shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold"
+            >
+              <MessageSquare className="w-5 h-5 mr-2" />
+              AI Assist
+            </Button>
+          )}
+          <Button
+            onClick={onCreateProposal}
+            variant="primary"
+            size="lg"
+            className="flex items-center shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Create Proposal
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -207,7 +177,7 @@ export default function ProposalList({
 
       {/* Results Count */}
       <div className="text-sm text-gray-600">
-        {filteredProposals.length} of {proposals.length} proposals
+        {filteredProposals.length} of {stats.total} proposals
       </div>
 
       {/* Proposals Grid */}
