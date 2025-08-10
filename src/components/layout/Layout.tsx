@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Header from './Header';
 import { cn } from '@/lib/utils';
 
 interface LayoutProps {
@@ -30,17 +29,13 @@ export default function Layout({
   };
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden">
-      <div className="gradient-bg" />
-      <Header />
-      <main className={cn(
-        'flex-1 relative z-10',
-        maxWidth !== 'full' ? `mx-auto ${maxWidthClasses[maxWidth]}` : 'w-full',
-        padding && 'px-4 sm:px-6 lg:px-8 py-6',
-        className
-      )}>
-        {children}
-      </main>
+    <div className={cn(
+      'w-full',
+      maxWidth !== 'full' ? `mx-auto ${maxWidthClasses[maxWidth]}` : 'w-full',
+      padding && 'px-4 sm:px-6 lg:px-8 py-6',
+      className
+    )}>
+      {children}
     </div>
   );
 }

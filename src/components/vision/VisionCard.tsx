@@ -15,12 +15,12 @@ import {
   Star 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { CompanyProfile } from '@/database/shared/types';
+// types removed
 
 interface VisionCardProps {
-  vision: CompanyProfile;
-  onView?: (vision: CompanyProfile) => void;
-  onEdit?: (vision: CompanyProfile) => void;
+  vision: any;
+  onView?: (vision: any) => void;
+  onEdit?: (vision: any) => void;
 }
 
 const statusColors = {
@@ -123,7 +123,7 @@ const VisionCard = memo(function VisionCard({ vision, onView, onEdit }: VisionCa
                 <h4 className="text-sm font-semibold text-gray-700">Unique Value</h4>
               </div>
               <p className="text-sm text-gray-600 line-clamp-2">
-                {vision.company_vision?.unique_value_proposition || 'No unique value defined'}
+                {vision.company_vision?.uniqueValue || 'No unique value defined'}
               </p>
             </div>
           </div>

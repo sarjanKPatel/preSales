@@ -13,13 +13,12 @@ import {
   AlertCircle,
   MessageSquare
 } from 'lucide-react';
-import { useProposals, useProposalStats, useUpdateProposal } from '@/database/proposals/hooks';
-import type { Proposal } from '@/database/shared/types';
+// types removed
 
 interface ProposalListProps {
   onCreateProposal?: () => void;
   onChatAssist?: () => void;
-  onOpenProposal?: (proposal: Proposal) => void;
+  onOpenProposal?: (proposal: any) => void;
 }
 
 export default function ProposalList({
@@ -27,29 +26,26 @@ export default function ProposalList({
   onChatAssist,
   onOpenProposal,
 }: ProposalListProps) {
-  const { user } = useAuth();
+  // TODO: Replace with new authentication system
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'ready' | 'archived'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'active' | 'inactive'>('all');
   
-  // Fetch proposals using database hooks
-  const { proposals, loading, error, refresh } = useProposals({
-    search: searchTerm || undefined,
-    status: statusFilter === 'all' ? undefined : statusFilter,
-    limit: 100
-  });
+  // TODO: Replace with new database integration
+  const proposals: any[] = [];
+  const loading = false;
+  const error = null;
+  const refresh = () => {};
   
-  const { stats } = useProposalStats();
-  const { updateProposal } = useUpdateProposal();
+  const stats = { total: 0, draft: 0, active: 0, archived: 0 };
+  const updateProposal = async () => {};
 
 
   // Proposals are already filtered by the hook based on search and status
   const filteredProposals = proposals || [];
 
-  const handleArchiveProposal = async (proposal: Proposal) => {
+  const handleArchiveProposal = async (proposal: any) => {
     try {
-      await updateProposal(proposal.id, {
-        status: 'archived'
-      });
+      await updateProposal();
       
       // Refresh the list to show updated data
       refresh();
@@ -59,33 +55,19 @@ export default function ProposalList({
     }
   };
 
-  const handleMarkReady = async (proposal: Proposal) => {
+  const handleMarkActive = async (proposal: any) => {
     try {
-      await updateProposal(proposal.id, {
-        status: 'ready'
-      });
+      await updateProposal();
       
       // Refresh the list to show updated data
       refresh();
     } catch (err) {
-      console.error('Error marking proposal as ready:', err);
-      alert('Failed to mark proposal as ready');
+      console.error('Error marking proposal as active:', err);
+      alert('Failed to mark proposal as active');
     }
   };
 
-  if (!user) {
-    return (
-      <div className="text-center py-12">
-        <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">
-          Authentication Required
-        </h3>
-        <p className="text-gray-600">
-          Please sign in to view your proposals.
-        </p>
-      </div>
-    );
-  }
+  // TODO: Add authentication check after implementing new auth system
 
   if (loading) {
     return (
@@ -164,13 +146,13 @@ export default function ProposalList({
           <Filter className="w-4 h-4 text-gray-500" />
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as 'all' | 'draft' | 'ready' | 'archived')}
+            onChange={(e) => setStatusFilter(e.target.value as 'all' | 'draft' | 'active' | 'inactive')}
             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 bg-white"
           >
             <option value="all">All Status</option>
             <option value="draft">Draft</option>
-            <option value="ready">Ready</option>
-            <option value="archived">Archived</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
           </select>
         </div>
       </div>
@@ -213,7 +195,7 @@ export default function ProposalList({
               proposal={proposal}
               onClick={onOpenProposal}
               onArchive={handleArchiveProposal}
-              onMarkReady={handleMarkReady}
+              onMarkReady={handleMarkActive}
             />
           ))}
         </div>

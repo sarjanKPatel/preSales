@@ -8,13 +8,16 @@ import {
   Trash2, 
   Edit3,
   ChevronLeft,
+  ChevronRight,
   Clock
 } from 'lucide-react';
 import Button from '@/components/Button';
 import { cn } from '@/lib/utils';
-import type { ChatSession } from '@/database/shared/types';
-
-export type { ChatSession };
+export interface ChatSession {
+  id: string;
+  title: string;
+  updated_at: string;
+}
 
 interface ChatSidebarProps {
   isOpen: boolean;                                    // Controls sidebar visibility
@@ -68,46 +71,46 @@ export default function ChatSidebar({
     proposal: 'bg-green-500/20 text-green-600'
   };
   
-  const getSessionType = (session: ChatSession) => {  // Extract session type from metadata
+  const getSessionType = (session: any) => {  // Extract session type from metadata
     return session.metadata?.entity_type || 'chat';
   };
   
-  const getSessionPreview = (session: ChatSession) => { // Get preview text from session metadata
+  const getSessionPreview = (session: any) => { // Get preview text from session metadata
     return session.metadata?.last_message_preview || '';
   };
 
   return (
     <>
-      {/* Toggle Button */}
-      <button
-        onClick={onToggle}                            // Toggle sidebar visibility
-        className={cn(
-          "fixed top-20 z-40 p-2 glass rounded-r-lg transition-all duration-300",
-          "hover:bg-white/30 group",
-          isOpen ? "left-[280px]" : "left-0"
-        )}
-      >
-        {isOpen ? (
-          <ChevronLeft className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
-        ) : (
-          <Menu className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
-        )}
-      </button>
-
-      {/* Sidebar */}
-      <div className={cn(
-        "fixed left-0 top-16 h-[calc(100vh-4rem)] w-[280px] glass-heavy",
-        "border-r border-white/20 transition-transform duration-300 z-30",
-        "flex flex-col",
-        isOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
-        {/* Header */}
+      {/* Collapsed Toggle Button */}
+      {!isOpen && (
+        <button
+          onClick={onToggle}
+          className="w-12 h-12 glass-heavy border border-white/20 rounded-lg flex items-center justify-center hover:bg-white/20 transition-all duration-500 m-2"
+        >
+          <ChevronRight className="w-5 h-5 text-gray-600" />
+        </button>
+      )}
+      
+      {/* Expanded Sidebar */}
+      {isOpen && (
+        <div className="w-[280px] h-full glass-heavy border-r border-white/20 flex flex-col transition-all duration-500 ease-in-out">
+          {/* Header with Close Button */}
+          <div className="flex items-center justify-between p-3 border-b border-white/20">
+            <h2 className="text-sm font-semibold text-gray-900">Chat History</h2>
+            <button
+              onClick={onToggle}
+              className="p-1 glass rounded hover:bg-white/30 transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4 text-gray-600" />
+            </button>
+          </div>
+        {/* New Chat Button */}
         <div className="p-4 border-b border-white/20">
           <Button
             variant="primary"
             className="w-full"
             icon={<Plus className="w-4 h-4" />}
-            onClick={onNewSession}                    // Create new chat session
+            onClick={onNewSession}
           >
             New Chat
           </Button>
@@ -180,8 +183,9 @@ export default function ChatSidebar({
               </div>
             ))
           )}
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

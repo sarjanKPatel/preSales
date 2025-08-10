@@ -6,18 +6,18 @@ import Card from '@/components/Card';
 import VisionCard from './VisionCard';
 import VisionEmptyState from './VisionEmptyState';
 import { Loader2 } from 'lucide-react';
-import type { CompanyProfile } from '@/database/shared/types';
+// types removed
 
 interface VisionListProps {
-  profiles: CompanyProfile[];
+  profiles: any[];
   loading: boolean;
   error: string | null;
   searchQuery: string;
   selectedStatus: string;
   onRefresh: () => void;
   onCreateVision?: () => void;
-  onViewVision?: (vision: CompanyProfile) => void;
-  onEditVision?: (vision: CompanyProfile) => void;
+  onViewVision?: (vision: any) => void;
+  onEditVision?: (vision: any) => void;
 }
 
 const VisionList = memo(function VisionList({

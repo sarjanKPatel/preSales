@@ -13,24 +13,19 @@ import Button from '@/components/Button';
 import Card from '@/components/Card';
 
 export interface DraftVision {
-  mission?: string;
-  values?: string;
-  goals?: string;
-  uniqueValue?: string;
   companyName?: string;
+  mission?: string;
+  values?: string[];
+  goals?: string[];
+  uniqueValue?: string;
 }
 
-interface VisionPreviewProps {
-  draftVision: DraftVision;
-  onSave: (vision: DraftVision) => void;
-  isSaving?: boolean;
-}
 
 export default function VisionPreview({
   draftVision,
   onSave,
   isSaving = false
-}: VisionPreviewProps) {
+}: any) {
   const hasContent = draftVision.mission || draftVision.values || 
                     draftVision.goals || draftVision.uniqueValue;
 

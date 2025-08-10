@@ -1,17 +1,26 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User } from '@supabase/supabase-js';
-import { auth } from '@/lib/supabase';
-import { Profile } from '@/types';
+import { User, Session } from '@supabase/supabase-js';
+import { auth, db } from '@/lib/supabase';
+
+interface Profile {
+  id: string;
+  email: string;
+  full_name: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
 interface AuthContextType {
   user: User | null;
   profile: Profile | null;
+  session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,6 +28,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
 
@@ -36,22 +46,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Get initial session
     const getInitialSession = async () => {
       try {
-        const { user: currentUser } = await auth.getCurrentUser();
+        const { data: { session }, error } = await auth.getSession();
+        
         if (!mounted) return;
         
-        setUser(currentUser);
-        
-        if (currentUser) {
-          // TODO: Fetch user profile from profiles table
-          // For now, create a basic profile from auth user
-          setProfile({
-            id: currentUser.id,
-            email: currentUser.email || '',
-            full_name: currentUser.user_metadata?.full_name || null,
-            role: 'sales_executive',
-            created_at: currentUser.created_at,
-            updated_at: currentUser.updated_at || currentUser.created_at,
-          });
+        if (error) {
+          console.error('Error getting initial session:', error);
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+        } else if (session) {
+          setSession(session);
+          setUser(session.user);
+          
+          // Get profile data
+          await fetchProfile(session.user);
+        } else {
+          setSession(null);
+          setUser(null);
+          setProfile(null);
         }
       } catch (error) {
         console.error('Error getting initial session:', error);
@@ -62,25 +75,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
+    const fetchProfile = async (user: User) => {
+      if (!user) return;
+      
+      try {
+        // First try to get profile from database
+        const { data: profileData, error } = await db.getMyProfile();
+        
+        if (profileData && !error) {
+          setProfile(profileData);
+        } else {
+          // Fallback to user metadata if no profile exists yet
+          setProfile({
+            id: user.id,
+            email: user.email || '',
+            full_name: user.user_metadata?.full_name || null,
+            created_at: user.created_at,
+            updated_at: user.updated_at || user.created_at
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        // Fallback to user metadata on error
+        setProfile({
+          id: user.id,
+          email: user.email || '',
+          full_name: user.user_metadata?.full_name || null,
+          created_at: user.created_at,
+          updated_at: user.updated_at || user.created_at
+        });
+      }
+    };
+
     getInitialSession();
 
     // Listen for auth changes
     const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
       
-      setUser(session?.user || null);
+      setSession(session);
       
       if (session?.user) {
-        // TODO: Fetch user profile from profiles table
-        setProfile({
-          id: session.user.id,
-          email: session.user.email || '',
-          full_name: session.user.user_metadata?.full_name || null,
-          role: 'sales_executive',
-          created_at: session.user.created_at,
-          updated_at: session.user.updated_at || session.user.created_at,
-        });
+        setUser(session.user);
+        
+        // Check for pending full name from signup
+        const pendingFullName = sessionStorage.getItem('pendingFullName');
+        if (pendingFullName && event === 'SIGNED_IN') {
+          try {
+            await db.upsertProfile(pendingFullName);
+            sessionStorage.removeItem('pendingFullName');
+          } catch (profileError) {
+            console.error('Error creating profile with full name:', profileError);
+          }
+        }
+        
+        await fetchProfile(session.user);
       } else {
+        setUser(null);
         setProfile(null);
       }
       
@@ -117,7 +168,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     setLoading(true);
     try {
-      const { error } = await auth.signUp(email, password, fullName);
+      const { error } = await auth.signUp(email, password);
+      
+      if (!error && fullName) {
+        // Store full name temporarily to use when auth state changes
+        sessionStorage.setItem('pendingFullName', fullName);
+      }
+      
       return { error };
     } catch (err) {
       console.error('Sign up error:', err);
@@ -135,6 +192,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     try {
       await auth.signOut();
+      setUser(null);
+      setProfile(null);
+      setSession(null);
     } catch (err) {
       console.error('Sign out error:', err);
     } finally {
@@ -142,13 +202,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const refreshProfile = async () => {
+    if (!user) return;
+    await fetchProfile(user);
+  };
+
   const value: AuthContextType = {
     user: mounted ? user : null,
     profile: mounted ? profile : null,
+    session: mounted ? session : null,
     loading: mounted ? loading : true,
     signIn,
     signUp,
     signOut,
+    refreshProfile,
   };
 
   return (

@@ -9,8 +9,7 @@ import { MessageProps } from '../shared/Message';
 import { cn } from '@/lib/utils';
 import { useAgentResponse } from '@/hooks/useAgentResponse';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRecentChatSessions, useCreateChatSession, useUpdateChatSession, useDeleteChatSession, useCreateChatMessage, useSessionWithMessages } from '@/database/chat/hooks';
-import type { ChatMessage } from '@/database/shared/types';
+// types removed
 
 interface VisionChatLayoutProps {
   className?: string;                                 // Additional CSS classes
@@ -33,29 +32,22 @@ export default function VisionChatLayout({
   const [isSaving, setIsSaving] = useState(false);    // Vision save loading state
   const [chatWidth, setChatWidth] = useState(66);     // Resizable splitter width (default 2/3)
 
-  // Database hooks
-  const { sessions, refresh: refreshSessions } = useRecentChatSessions(20); // Fetch recent chat sessions
-  const { createSession } = useCreateChatSession();    // Create new chat session
-  const { updateSession } = useUpdateChatSession();    // Update existing session
-  const { deleteSession } = useDeleteChatSession();    // Delete chat session
-  const { createMessage } = useCreateChatMessage();    // Add message to session
-  const { session: activeSession, refresh: refreshActiveSession } = useSessionWithMessages(activeSessionId || null); // Get active session with messages
+  // TODO: Replace with new database integration
+  const sessions: any[] = [];
+  const refreshSessions = () => {};
+  const createSession = async () => ({ id: 'temp', title: 'New Chat' });
+  const updateSession = async () => {};
+  const deleteSession = async () => {};
+  const createMessage = async () => ({ id: 'temp' });
+  const activeSession = null;
+  const refreshActiveSession = () => {};
 
-  const { generateResponse, isGenerating } = useAgentResponse('vision', setDraftVision); // AI response generation
+  const { sendMessage, loading: isGenerating } = useAgentResponse();
   
-  // Load messages when active session changes
+  // TODO: Replace with new database integration
   useEffect(() => {
-    if (activeSession?.messages) {
-      const formattedMessages: MessageProps[] = activeSession.messages.map((msg: ChatMessage) => ({
-        id: msg.id,
-        content: msg.content,
-        role: msg.role as 'user' | 'assistant',
-        timestamp: msg.created_at
-      }));
-      setMessages(formattedMessages);
-    } else {
-      setMessages([]);
-    }
+    // activeSession is now always null, so just set empty messages
+    setMessages([]);
   }, [activeSession]);
   
   // Set initial active session
@@ -68,16 +60,7 @@ export default function VisionChatLayout({
   const handleNewSession = async () => {              // Create new chat session
     if (!user) return;
     
-    const newSession = await createSession({
-      title: 'New Vision Chat',
-      chat_type: 'vision',
-      created_by: user.id,
-      metadata: {
-        entity_type: 'vision',
-        entity_id: entityId,
-        entity_name: entityName
-      }
-    });
+    const newSession = await createSession();
     
     if (newSession) {
       setActiveSessionId(newSession.id);
@@ -94,14 +77,14 @@ export default function VisionChatLayout({
   const handleRenameSession = async (sessionId: string) => { // Rename chat session
     const newName = prompt('Enter new name:');
     if (newName) {
-      await updateSession(sessionId, { title: newName });
+      await updateSession();
       refreshSessions();
     }
   };
 
   const handleDeleteSession = async (sessionId: string) => { // Delete chat session
     if (confirm('Delete this chat session?')) {
-      await deleteSession(sessionId);
+      await deleteSession();
       if (activeSessionId === sessionId) {
         const remainingSessions = sessions.filter(s => s.id !== sessionId);
         setActiveSessionId(remainingSessions[0]?.id);
@@ -114,54 +97,35 @@ export default function VisionChatLayout({
     if (!activeSessionId) return;
     
     // Create user message in database
-    const userMessage = await createMessage({
-      session_id: activeSessionId,
-      role: 'user',
-      content,
-      metadata: {}
-    });
-    
-    if (!userMessage) return;
+    const userMessage = await createMessage();
     
     // Add to local state immediately
     const userMessageProps: MessageProps = {
-      id: userMessage.id,
-      content: userMessage.content,
+      id: Date.now().toString(),
+      content,
       role: 'user',
-      timestamp: userMessage.created_at
+      timestamp: new Date().toISOString()
     };
     setMessages(prev => [...prev, userMessageProps]);
 
     // Generate AI response
-    const response = await generateResponse(content, messages);
+    const response = await sendMessage(content);
     
     // Create AI message in database
-    const aiMessage = await createMessage({
-      session_id: activeSessionId,
-      role: 'assistant',
-      content: response,
-      metadata: {}
-    });
+    const aiMessage = await createMessage();
     
-    if (aiMessage) {
-      const aiMessageProps: MessageProps = {
-        id: aiMessage.id,
-        content: aiMessage.content,
-        role: 'assistant',
-        timestamp: aiMessage.created_at
-      };
-      setMessages(prev => [...prev, aiMessageProps]);
-      
-      // Update session with preview
-      await updateSession(activeSessionId, {
-        metadata: {
-          ...activeSession?.metadata,
-          last_message_preview: content.slice(0, 50) + '...'
-        }
-      });
-      refreshSessions();
-    }
-  }, [activeSessionId, createMessage, generateResponse, messages, updateSession, activeSession?.metadata, refreshSessions]);
+    const aiMessageProps: MessageProps = {
+      id: (Date.now() + 1).toString(),
+      content: response.content,
+      role: 'assistant',
+      timestamp: response.timestamp
+    };
+    setMessages(prev => [...prev, aiMessageProps]);
+    
+    // Update session with preview
+    await updateSession();
+    refreshSessions();
+  }, [activeSessionId, createMessage, sendMessage, messages, updateSession, refreshSessions]);
 
   const handleRegenerateMessage = (messageId: string) => { // Regenerate AI response for specific message
     const messageIndex = messages.findIndex(m => m.id === messageId);
@@ -180,7 +144,7 @@ export default function VisionChatLayout({
   };
 
   return (
-    <div className={cn("flex h-[calc(100vh-4rem)] relative", className)}>
+    <div className={cn("flex h-full relative", className)}>
       {/* Left Sidebar */}
       <ChatSidebar
         isOpen={sidebarOpen}
@@ -190,14 +154,11 @@ export default function VisionChatLayout({
         onSessionSelect={handleSessionSelect}           // Handle session selection
         onNewSession={handleNewSession}                // Create new session
         onRenameSession={handleRenameSession}          // Rename session
-        onDeleteSession={handleDeleteSession}          // Delete session
+        onDeleteSession={handleDeleteSession}
       />
 
       {/* Main Content Area */}
-      <div className={cn(
-        "flex-1 transition-all duration-300",
-        sidebarOpen && "ml-[280px]"                    // Adjust margin when sidebar is open
-      )}>
+      <div className="flex-1 h-full">
         <ResizableSplitter
             leftPanel={
               <ChatWindow

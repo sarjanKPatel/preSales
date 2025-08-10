@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
 import Card from '@/components/Card';
 import Button from '@/components/Button';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import WorkspaceGate from '@/components/workspaces/WorkspaceGate';
 import { 
   Plus, 
   Search, 
@@ -21,8 +23,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
-import { useLeads, useLeadStats } from '@/database/leads/hooks';
-import type { Lead } from '@/database/shared/types';
+// types removed
 
 
 const statusColors = {
@@ -40,14 +41,15 @@ export default function LeadsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   
-  // Fetch leads using database hooks
-  const { leads, loading, error, refresh } = useLeads({
-    search: searchQuery || undefined,
-    status: selectedStatus === 'all' ? undefined : selectedStatus,
-    limit: 50
-  });
+  // TODO: Replace with new database integration
+  const leads: any[] = [];
+  const loading = false;
+  const error = null;
+  const refresh = () => {};
   
-  const { stats, loading: statsLoading } = useLeadStats();
+  // TODO: Replace with new database integration
+  const stats = { total: 0, qualified: 0, contacted: 0, converted: 0, totalPipeline: 0, conversionRate: 0 };
+  const statsLoading = false;
 
   const handleAddNewLead = () => {
     router.push('/chat?type=lead');
@@ -74,8 +76,10 @@ export default function LeadsPage() {
   };
 
   return (
-    <Layout maxWidth="7xl" padding>
-      <div className="space-y-6">
+    <ProtectedRoute>
+      <WorkspaceGate>
+        <Layout maxWidth="7xl" padding>
+        <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -288,7 +292,7 @@ export default function LeadsPage() {
                       {(lead.metadata?.status || 'new').replace('_', ' ')}
                     </span>
                     <p className="text-lg font-semibold text-gray-900">
-                      {formatCurrency(parseFloat(lead.metadata?.deal_size) || 0)}
+                      {formatCurrency(lead.metadata?.deal_size)}
                     </p>
                   </div>
                 </div>
@@ -320,7 +324,9 @@ export default function LeadsPage() {
             )}
           </Card>
         )}
-      </div>
-    </Layout>
+        </div>
+      </Layout>
+      </WorkspaceGate>
+    </ProtectedRoute>
   );
 }

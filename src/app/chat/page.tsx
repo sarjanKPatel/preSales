@@ -1,22 +1,24 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
 import { VisionChatLayout } from '@/components/chat';
 import { DraftVision } from '@/components/chat';
-import { useCreateCompanyProfile } from '@/database/vision/hooks';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 
 // Remove mock sessions - ChatLayout now fetches its own data from the database
 
-export default function ChatPage() {
+function ChatPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useAuth();
   const [chatType, setChatType] = useState<'vision' | 'lead' | 'proposal'>('vision');
-  const { createProfile, loading: savingVision, error: saveError } = useCreateCompanyProfile();
+  // TODO: Replace with new database integration
+  const createProfile = async () => { return null; };
+  const savingVision = false;
+  const saveError = null;
 
   useEffect(() => {
     const type = searchParams.get('type') as 'vision' | 'lead' | 'proposal';
@@ -37,21 +39,8 @@ export default function ChatPage() {
     }
 
     try {
-      const profile = await createProfile({
-        name: vision.companyName,
-        user_id: user.id,
-        company_vision: {
-          mission: vision.mission,
-          values: vision.values,
-          goals: vision.goals,
-          uniqueValue: vision.uniqueValue,
-          companyName: vision.companyName
-        },
-        metadata: {
-          status: 'draft',
-          created_from: 'chat'
-        }
-      });
+      // TODO: Replace with new database integration
+      const profile = await createProfile();
 
       if (profile) {
         console.log('Vision saved successfully:', profile);
@@ -70,12 +59,19 @@ export default function ChatPage() {
   };
 
   return (
-    <Layout maxWidth="full" padding={false}>
-      <div className="h-[calc(100vh-4rem)]">
-        <VisionChatLayout
-          onSaveVision={handleSaveVision}
-        />
-      </div>
-    </Layout>
+    <div className="h-[calc(100vh-4rem)] w-full">
+      <VisionChatLayout
+        onSaveVision={handleSaveVision}
+        className="h-full"
+      />
+    </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ChatPageContent />
+    </Suspense>
   );
 }

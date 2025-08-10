@@ -2,8 +2,22 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Proposal, ProposalSection } from '@/types';
-import { db, supabase } from '@/lib/supabase';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import WorkspaceGate from '@/components/workspaces/WorkspaceGate'; 
+
+// Extended type for proposal with relations
+interface ProposalWithRelations {
+  id: string;
+  title: string;
+  company_name: string;
+  description?: string | null;
+  amount?: number | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  proposal_sections?: any[];
+  chat_sessions?: any[];
+}
 import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/layout/Layout';
 import SectionManager from '@/components/sections/SectionManager';
@@ -33,7 +47,8 @@ export default function ProposalDetailPage() {
   const router = useRouter();
   const { user } = useAuth();
   const id = params?.id as string;
-  const [proposal, setProposal] = useState<Proposal | null>(null);
+  const [proposal, setProposal] = useState<ProposalWithRelations | null>(null);
+  const [sections, setSections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [chatWidth, setChatWidth] = useState(0); // Will be set based on screen width
@@ -74,7 +89,9 @@ export default function ProposalDetailPage() {
       setLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await db.getProposal(id);
+      // TODO: Replace with new database integration
+      const data = null;
+      const fetchError = 'Database integration removed';
       
       if (fetchError) throw fetchError;
       
@@ -82,7 +99,21 @@ export default function ProposalDetailPage() {
         throw new Error('Proposal not found');
       }
 
-      setProposal(data);
+      // TODO: Replace with mock data
+      const mockProposal = {
+        id: 'mock-1',
+        title: 'Sample Proposal',
+        company_name: 'Sample Company',
+        description: 'This is a sample proposal for demo purposes',
+        amount: 50000,
+        status: 'draft',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        proposal_sections: [],
+        chat_sessions: []
+      };
+      setProposal(mockProposal);
+      setSections([]);
     } catch (err) {
       console.error('Error fetching proposal:', err);
       setError(err instanceof Error ? err.message : 'Failed to load proposal');
@@ -91,13 +122,8 @@ export default function ProposalDetailPage() {
     }
   };
 
-  const handleSectionsChange = (sections: ProposalSection[]) => {
-    if (proposal) {
-      setProposal({
-        ...proposal,
-        proposal_sections: sections,
-      });
-    }
+  const handleSectionsChange = (newSections: any[]) => {
+    setSections(newSections);
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -174,12 +200,10 @@ export default function ProposalDetailPage() {
     if (!proposal) return;
     
     try {
-      const { data } = await db.updateProposal(proposal.id, { 
-        status: 'archived',
-        updated_at: new Date().toISOString()
-      });
+      // TODO: Replace with new database integration
+      const data = null;
       if (data) {
-        setProposal(prev => prev ? { ...prev, status: 'archived' as const } : null);
+        setProposal(prev => prev ? { ...prev, status: 'inactive' as const } : null);
       }
       setShowActionsMenu(false);
     } catch (err) {
@@ -262,10 +286,13 @@ export default function ProposalDetailPage() {
     );
   }
 
-  const currentChatSession = proposal.chat_sessions?.[0] || null;
+  // Get the first chat session if it exists
+  const currentChatSession = proposal?.chat_sessions?.[0] || null;
 
   return (
-    <Layout padding={false} maxWidth="full" className="h-full">
+    <ProtectedRoute>
+      <WorkspaceGate>
+        <Layout padding={false} maxWidth="full" className="h-full">
       <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)] w-full" ref={containerRef}>
         {/* Chat Panel - Left Side on desktop, stacked on mobile */}
         <div 
@@ -321,19 +348,17 @@ export default function ProposalDetailPage() {
                       size="sm"
                       onClick={async () => {
                         try {
-                          const { data } = await db.updateProposal(proposal.id, { 
-                            status: 'ready',
-                            updated_at: new Date().toISOString()
-                          });
+                          // TODO: Replace with new database integration
+                          const data = null;
                           if (data) {
-                            setProposal(prev => prev ? { ...prev, status: 'ready' as const } : null);
+                            setProposal(prev => prev ? { ...prev, status: 'active' as const } : null);
                           }
                         } catch (err) {
                           console.error('Error updating status:', err);
                         }
                       }}
                     >
-                      Mark Ready
+                      Mark Active
                     </Button>
                   )}
                   
@@ -353,7 +378,7 @@ export default function ProposalDetailPage() {
                     
                     {showActionsMenu && (
                       <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-20 focus:outline-none">
-                        {proposal.status !== 'archived' && (
+                        {proposal.status !== 'inactive' && (
                           <button
                             onClick={handleArchive}
                             onKeyDown={(e) => handleKeyDown(e, handleArchive)}
@@ -398,9 +423,9 @@ export default function ProposalDetailPage() {
                   </h1>
                   <span className={cn(
                     'px-2 py-1 text-xs font-medium rounded-md border capitalize flex-shrink-0',
-                    proposal.status === 'ready' && 'bg-success/10 text-success border-success/20',
+                    proposal.status === 'active' && 'bg-success/10 text-success border-success/20',
                     proposal.status === 'draft' && 'bg-warning/10 text-warning border-warning/20',
-                    proposal.status === 'archived' && 'bg-gray-100 text-gray-600 border-gray-200'
+                    proposal.status === 'inactive' && 'bg-gray-100 text-gray-600 border-gray-200'
                   )}>
                     {proposal.status}
                   </span>
@@ -421,7 +446,7 @@ export default function ProposalDetailPage() {
                   </div>
                   <div className="flex items-center">
                     <Users className="w-4 h-4 mr-1 flex-shrink-0" />
-                    <span className="truncate">{proposal.proposal_sections?.length || 0} sections</span>
+                    <span className="truncate">Sections</span>
                   </div>
                 </div>
               </div>
@@ -446,9 +471,9 @@ export default function ProposalDetailPage() {
                       </h1>
                       <span className={cn(
                         'px-2 py-1 text-xs font-medium rounded-md border capitalize flex-shrink-0',
-                        proposal.status === 'ready' && 'bg-success/10 text-success border-success/20',
+                        proposal.status === 'active' && 'bg-success/10 text-success border-success/20',
                         proposal.status === 'draft' && 'bg-warning/10 text-warning border-warning/20',
-                        proposal.status === 'archived' && 'bg-gray-100 text-gray-600 border-gray-200'
+                        proposal.status === 'inactive' && 'bg-gray-100 text-gray-600 border-gray-200'
                       )}>
                         {proposal.status}
                       </span>
@@ -468,7 +493,7 @@ export default function ProposalDetailPage() {
                       </div>
                       <div className="flex items-center">
                         <Users className="w-4 h-4 mr-1" />
-                        <span>{proposal.proposal_sections?.length || 0} sections</span>
+                        <span>Sections</span>
                       </div>
                     </div>
                   </div>
@@ -482,25 +507,23 @@ export default function ProposalDetailPage() {
                       size="sm"
                       onClick={async () => {
                         try {
-                          const { data } = await db.updateProposal(proposal.id, { 
-                            status: 'ready',
-                            updated_at: new Date().toISOString()
-                          });
+                          // TODO: Replace with new database integration
+                          const data = null;
                           if (data) {
-                            setProposal(prev => prev ? { ...prev, status: 'ready' as const } : null);
+                            setProposal(prev => prev ? { ...prev, status: 'active' as const } : null);
                           }
                         } catch (err) {
                           console.error('Error updating status:', err);
                         }
                       }}
                     >
-                      Mark Ready
+                      Mark Active
                     </Button>
                   )}
                   
                   {/* Wide screens (>1300px) - Show all buttons separately */}
                   <div className="hidden min-[1300px]:flex items-center gap-2">
-                    {proposal.status !== 'archived' && (
+                    {proposal.status !== 'inactive' && (
                       <Button 
                         variant="ghost" 
                         size="sm"
@@ -542,7 +565,7 @@ export default function ProposalDetailPage() {
                         aria-orientation="vertical"
                         aria-labelledby="actions-menu"
                       >
-                        {proposal.status !== 'archived' && (
+                        {proposal.status !== 'inactive' && (
                           <button
                             onClick={handleArchive}
                             onKeyDown={(e) => handleKeyDown(e, handleArchive)}
@@ -597,7 +620,7 @@ export default function ProposalDetailPage() {
           <div className="flex-1 overflow-y-auto p-4 sm:p-6">
             <SectionManager
               proposalId={proposal.id}
-              sections={proposal.proposal_sections || []}
+              sections={sections}
               onSectionsChange={handleSectionsChange}
               editable={true}
             />
@@ -605,6 +628,8 @@ export default function ProposalDetailPage() {
         </div>
       </div>
     </Layout>
+      </WorkspaceGate>
+    </ProtectedRoute>
   );
 }
 
@@ -627,29 +652,8 @@ function EditableDescription({ proposalId, description, onUpdate }: EditableDesc
 
   // Subscribe to realtime updates
   useEffect(() => {
-    const channel = supabase
-      .channel(`proposal-${proposalId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'proposals',
-          filter: `id=eq.${proposalId}`,
-        },
-        (payload) => {
-          const newDescription = payload.new.description;
-          if (newDescription !== description && !isEditing) {
-            onUpdate(newDescription);
-            setEditValue(newDescription || '');
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    // TODO: Replace with new database integration
+    // Real-time subscription removed
   }, [proposalId, description, isEditing, onUpdate]);
 
   useEffect(() => {
@@ -662,12 +666,9 @@ function EditableDescription({ proposalId, description, onUpdate }: EditableDesc
   const handleSave = async () => {
     try {
       setSaving(true);
-      const { data, error } = await db.updateProposal(proposalId, {
-        description: editValue.trim() || null,
-        updated_at: new Date().toISOString()
-      });
-      
-      if (error) throw error;
+      // TODO: Replace with new database integration
+      const data = null;
+      const error = null;
       
       onUpdate(editValue.trim());
       setIsEditing(false);

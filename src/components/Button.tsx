@@ -1,6 +1,12 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { ButtonProps } from '@/types';
+// Button props interface
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'neutral';
+  size?: 'sm' | 'md' | 'lg';
+  loading?: boolean;
+  icon?: React.ReactNode;
+} 
 
 const Button: React.FC<ButtonProps> = ({
   children,
@@ -14,14 +20,15 @@ const Button: React.FC<ButtonProps> = ({
   icon,
   ...props
 }) => {
-  const baseClasses = 'inline-flex items-center justify-center rounded-xl font-semibold transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed backdrop-filter';
+  const baseClasses = 'inline-flex items-center justify-center rounded-xl font-semibold transition-all duration-300 focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed backdrop-filter';
 
   const variantClasses = {
-    primary: 'btn-glass-primary',
-    secondary: 'glass bg-white/70 text-gray-900 hover:bg-white/90 border-white/30',
-    outline: 'glass border-2 border-primary/50 text-primary hover:bg-primary/10 hover:border-primary/70',
-    ghost: 'text-gray-600 hover:bg-white/30 hover:backdrop-blur-md',
-    destructive: 'glass bg-red-500/80 text-white hover:bg-red-500/90 border-red-300/30',
+    primary: 'btn-glass-primary focus-visible:ring-primary',
+    secondary: 'glass bg-white/70 text-gray-900 hover:bg-white/90 border-white/30 focus-visible:ring-gray-400',
+    outline: 'glass border-2 border-primary/50 text-primary hover:bg-primary/10 hover:border-primary/70 focus-visible:ring-primary',
+    ghost: 'text-gray-600 hover:bg-white/30 hover:backdrop-blur-md focus-visible:ring-gray-400',
+    destructive: 'glass bg-red-500/80 text-white hover:bg-red-500/90 border-red-300/30 focus-visible:ring-red-400',
+    neutral: 'glass border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 focus-visible:ring-gray-400',
   };
 
   const sizeClasses = {

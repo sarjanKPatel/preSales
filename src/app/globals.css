@@ -161,11 +161,6 @@ a:hover {
   background-color: #f9fafb !important;
 }
 
-/* Focus indicators for accessibility */
-*:focus {
-  outline: 2px solid #6366f1;
-  outline-offset: 2px;
-}
 
 /* Ensure buttons have proper contrast */
 button {
@@ -247,46 +242,6 @@ button:disabled {
   box-shadow: 0 8px 32px rgba(99, 102, 241, 0.4);
 }
 
-/* Ensure primary buttons with glass effect */
-button[class*="bg-primary"] {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.9), rgba(79, 70, 229, 0.9)) !important;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  color: #ffffff !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  font-weight: 600 !important;
-  box-shadow: 0 4px 24px rgba(99, 102, 241, 0.3) !important;
-}
-
-button[class*="bg-primary"]:hover {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 1), rgba(79, 70, 229, 1)) !important;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.4) !important;
-}
-
-button[class*="bg-primary"]:active {
-  background: linear-gradient(135deg, rgba(79, 70, 229, 1), rgba(67, 56, 202, 1)) !important;
-  transform: translateY(0);
-}
-
-/* Outline button with glass enhancement */
-button[class*="border-primary"] {
-  background: rgba(255, 255, 255, 0.1) !important;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 2px solid rgba(99, 102, 241, 0.5) !important;
-  color: #6366f1 !important;
-  font-weight: 600 !important;
-  transition: all 0.3s ease;
-}
-
-button[class*="border-primary"]:hover {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.9), rgba(79, 70, 229, 0.9)) !important;
-  border-color: transparent !important;
-  color: #ffffff !important;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.4) !important;
-}
 
 /* High contrast mode support */
 @media (prefers-contrast: high) {
@@ -302,14 +257,81 @@ button[class*="border-primary"]:hover {
     color: #6b7280 !important;
   }
   
-  /* Enhanced contrast for buttons in high contrast mode */
-  button[class*="bg-primary"] {
-    background-color: #3730a3 !important;
-    border: 2px solid #1e1b4b !important;
+}
+
+/* Dropdown animations */
+@keyframes dropdown-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
   }
-  
-  button[class*="border-primary"] {
-    border: 3px solid #3730a3 !important;
-    color: #3730a3 !important;
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
+}
+
+@keyframes slide-down {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+    max-height: 0;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 300px;
+  }
+}
+
+@keyframes dropdown-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+}
+
+@keyframes slide-up {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 300px;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px);
+    max-height: 0;
+  }
+}
+
+.animate-dropdown-in {
+  animation: dropdown-in 0.15s ease-out forwards;
+}
+
+.animate-dropdown-out {
+  animation: dropdown-out 0.15s ease-in forwards;
+}
+
+.animate-slide-down {
+  animation: slide-down 0.15s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.15s ease-in forwards;
+}
+
+/* Prevent layout shift in header */
+header {
+  will-change: auto;
+  contain: layout;
+}
+
+/* Ensure header stays fixed during navigation */
+.glass-heavy {
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }

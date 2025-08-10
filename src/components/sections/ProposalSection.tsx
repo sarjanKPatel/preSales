@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ProposalSection } from '@/types';
+ 
 import { cn } from '@/lib/utils';
 import { 
   Edit3, 
@@ -16,8 +16,8 @@ import {
 import Button from '@/components/Button';
 
 interface ProposalSectionProps {
-  section: ProposalSection;
-  onUpdate?: (sectionId: string, updates: Partial<ProposalSection>) => void;
+  section: any;
+  onUpdate?: (sectionId: string, updates: any) => void;
   onDelete?: (sectionId: string) => void;
   editable?: boolean;
   collapsible?: boolean;

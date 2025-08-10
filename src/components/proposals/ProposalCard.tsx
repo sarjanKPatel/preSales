@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Proposal } from '@/types';
+ 
 import { cn } from '@/lib/utils';
 import Button from '@/components/Button';
 import { 
@@ -13,10 +13,10 @@ import {
 } from 'lucide-react';
 
 interface ProposalCardProps {
-  proposal: Proposal;
-  onClick?: (proposal: Proposal) => void;
-  onArchive?: (proposal: Proposal) => void;
-  onMarkReady?: (proposal: Proposal) => void;
+  proposal: any;
+  onClick?: (proposal: any) => void;
+  onArchive?: (proposal: any) => void;
+  onMarkReady?: (proposal: any) => void;
 }
 
 export default function ProposalCard({ 
@@ -28,11 +28,11 @@ export default function ProposalCard({
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'ready':
+      case 'active':
         return 'bg-success/10 text-success border-success/20';
       case 'draft':
         return 'bg-warning/10 text-warning border-warning/20';
-      case 'archived':
+      case 'inactive':
         return 'bg-gray-100 text-gray-600 border-gray-200';
       default:
         return 'bg-gray-100 text-gray-600 border-gray-200';
@@ -107,17 +107,7 @@ export default function ProposalCard({
         </p>
       )}
 
-      {/* Sections Count */}
-      <div className="flex items-center text-sm text-gray-500 mb-4">
-        <span>
-          {proposal.proposal_sections?.length || 0} sections
-        </span>
-        {proposal.proposal_sections?.some(s => s.is_ai_generated) && (
-          <span className="ml-2 px-2 py-1 bg-primary-50 text-primary-600 rounded text-xs">
-            AI Enhanced
-          </span>
-        )}
-      </div>
+      {/* Sections Count - removed until sections are loaded */}
 
       {/* Footer with Date and Amount */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-100 mb-4">
@@ -141,11 +131,11 @@ export default function ProposalCard({
             className="flex-1 text-xs"
           >
             <CheckCircle2 className="w-3 h-3 mr-1" />
-            Mark Ready
+            Mark Active
           </Button>
         )}
         
-        {proposal.status !== 'archived' && onArchive && (
+        {proposal.status !== 'inactive' && onArchive && (
           <Button
             onClick={handleArchive}
             variant="ghost"

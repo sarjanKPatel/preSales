@@ -1,6 +1,12 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { CardProps } from '@/types';
+// Card props interface
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  title?: string;
+  subtitle?: string;
+  padding?: 'sm' | 'md' | 'lg';
+  shadow?: 'sm' | 'md' | 'lg' | 'none';
+} 
 
 const Card: React.FC<CardProps> = ({
   children,
@@ -25,7 +31,7 @@ const Card: React.FC<CardProps> = ({
   };
 
   const classes = cn(
-    'glass-card rounded-xl overflow-hidden transition-all duration-300 hover:scale-[1.02]',
+    'glass-card rounded-xl overflow-hidden',
     paddingClasses[padding],
     shadowClasses[shadow],
     className

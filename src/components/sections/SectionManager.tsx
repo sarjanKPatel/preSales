@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ProposalSection } from '@/types';
-import { db } from '@/lib/supabase';
+ 
 import ProposalSectionComponent from './ProposalSection';
 import Button from '@/components/Button';
 import { 
@@ -17,8 +16,8 @@ import {
 
 interface SectionManagerProps {
   proposalId: string;
-  sections: ProposalSection[];
-  onSectionsChange?: (sections: ProposalSection[]) => void;
+  sections: any[];
+  onSectionsChange?: (sections: any[]) => void;
   editable?: boolean;
 }
 
@@ -55,11 +54,12 @@ export default function SectionManager({
     }
   }, [showDropdown]);
 
-  const handleUpdateSection = async (sectionId: string, updates: Partial<ProposalSection>) => {
+  const handleUpdateSection = async (sectionId: string, updates: any) => {
     try {
       setLoading(true);
       
-      const { error } = await db.updateSection(sectionId, updates);
+      // TODO: Replace with new database integration
+      const error = null;
       
       if (error) throw error;
       
@@ -80,7 +80,8 @@ export default function SectionManager({
     try {
       setLoading(true);
       
-      const { error } = await db.deleteSection(sectionId);
+      // TODO: Replace with new database integration
+      const error = null;
       
       if (error) throw error;
       
@@ -116,7 +117,9 @@ export default function SectionManager({
         order_index: maxOrder + 1,
       };
 
-      const { data, error } = await db.addSection(sectionData);
+      // TODO: Replace with new database integration
+      const data = null;
+      const error = null;
       
       if (error) throw error;
       
@@ -179,8 +182,9 @@ export default function SectionManager({
 
       // Swap order indexes
       await Promise.all([
-        db.updateSection(section.id, { order_index: targetSection.order_index }),
-        db.updateSection(targetSection.id, { order_index: section.order_index }),
+        // TODO: Replace with new database integration
+        Promise.resolve(),
+        Promise.resolve()
       ]);
 
       // Update local state

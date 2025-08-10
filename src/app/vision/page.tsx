@@ -4,11 +4,12 @@ import React, { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
 import Button from '@/components/Button';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import WorkspaceGate from '@/components/workspaces/WorkspaceGate';
 import { Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCompanyProfiles, useCompanyProfileStats } from '@/database/vision/hooks';
 import { VisionStatsCards, VisionFilters, VisionList } from '@/components/vision';
-import type { CompanyProfile } from '@/database/shared/types';
+// types removed
 
 
 
@@ -18,14 +19,15 @@ export default function CompanyVisionPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   
-  // Fetch company profiles using database hooks
-  const { profiles, loading, error, refresh } = useCompanyProfiles({
-    search: searchQuery || undefined,
-    status: selectedStatus === 'all' ? undefined : selectedStatus,
-    limit: 50
-  });
+  // TODO: Replace with new database integration
+  const profiles: any[] = [];
+  const loading = false;
+  const error = null;
+  const refresh = () => {};
   
-  const { stats, loading: statsLoading } = useCompanyProfileStats();
+  // TODO: Replace with new database integration
+  const stats = { total: 0, draft: 0, active: 0, archived: 0, primary: 0 };
+  const statsLoading = false;
 
   const handleCreateNewVision = useCallback(() => {
     router.push('/chat?type=vision');
@@ -39,12 +41,12 @@ export default function CompanyVisionPage() {
     setSelectedStatus(status);
   }, []);
 
-  const handleViewVision = useCallback((vision: CompanyProfile) => {
+  const handleViewVision = useCallback((vision: any) => {
     console.log('View vision:', vision);
     // TODO: Implement view vision functionality
   }, []);
 
-  const handleEditVision = useCallback((vision: CompanyProfile) => {
+  const handleEditVision = useCallback((vision: any) => {
     console.log('Edit vision:', vision);
     // TODO: Implement edit vision functionality
   }, []);
@@ -53,8 +55,10 @@ export default function CompanyVisionPage() {
   const filteredVisions = profiles || [];
 
   return (
-    <Layout maxWidth="7xl" padding>
-      <div className="space-y-6">
+    <ProtectedRoute>
+      <WorkspaceGate>
+        <Layout maxWidth="7xl" padding>
+        <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -97,7 +101,9 @@ export default function CompanyVisionPage() {
           onViewVision={handleViewVision}
           onEditVision={handleEditVision}
         />
-      </div>
-    </Layout>
+        </div>
+      </Layout>
+      </WorkspaceGate>
+    </ProtectedRoute>
   );
 }

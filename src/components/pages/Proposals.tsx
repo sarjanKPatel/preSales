@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Proposal } from '@/types';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import WorkspaceGate from '@/components/workspaces/WorkspaceGate'; 
 import Layout from '@/components/layout/Layout';
 import ProposalList from '@/components/proposals/ProposalList';
 import CreateProposalModal from '@/components/proposals/CreateProposalModal';
@@ -24,23 +25,27 @@ export default function ProposalsPage() {
     router.push(`/proposals/${proposalId}`);
   };
 
-  const handleOpenProposal = (proposal: Proposal) => {
+  const handleOpenProposal = (proposal: any) => {
     router.push(`/proposals/${proposal.id}`);
   };
 
   return (
-    <Layout maxWidth="full">
-      <ProposalList
-        onCreateProposal={handleCreateProposal}
-        onChatAssist={handleChatAssist}
-        onOpenProposal={handleOpenProposal}
-      />
+    <ProtectedRoute>
+      <WorkspaceGate>
+        <Layout maxWidth="full">
+        <ProposalList
+          onCreateProposal={handleCreateProposal}
+          onChatAssist={handleChatAssist}
+          onOpenProposal={handleOpenProposal}
+        />
 
-      <CreateProposalModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSuccess={handleProposalCreated}
-      />
-    </Layout>
+        <CreateProposalModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={handleProposalCreated}
+        />
+      </Layout>
+      </WorkspaceGate>
+    </ProtectedRoute>
   );
 }

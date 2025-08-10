@@ -150,12 +150,28 @@ await db.addSection({
 ## Important Notes
 
 ### Current State
-- **Authentication**: Supabase Auth integration complete
-- **Database**: Full schema with RLS policies
-- **UI Components**: Complete component library
-- **Routing**: React Router setup with all major pages
+- **Authentication**: Complete Supabase Auth with profile management
+- **Workspace Management**: Full workspace-gated architecture
+- **Database**: Complete schema with RLS policies and workspace RPCs
+- **UI Components**: Complete component library with settings pages
+- **Routing**: Protected routes with workspace requirements
+- **Settings**: Profile management and team invite system
 - **Chat**: Interface complete, OpenAI integration pending
 - **Proposals**: Full CRUD operations with dynamic sections
+
+### Authentication & Workspace Flow
+1. **User Registration**: Sign up with email, password, and full name
+2. **Workspace Requirement**: Users must create/select workspace to access platform
+3. **Profile Management**: Users can update profile information in settings
+4. **Team Invites**: Workspace admins can invite team members
+5. **Route Protection**: All features require authentication + workspace context
+
+### New Features Added
+- **WorkspaceContext**: Centralized workspace state management
+- **WorkspaceGate**: Enforces workspace selection for all app features
+- **Settings Page**: Profile management and team invitation system
+- **Enhanced User Experience**: Loading states, error handling, first name display
+- **Invite System**: Complete invite workflow (ready for backend integration)
 
 ### Next Steps for AI Integration
 1. Add OpenAI API client to `src/lib/openai.ts`
