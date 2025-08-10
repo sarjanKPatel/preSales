@@ -32,6 +32,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
 
+  const fetchProfile = async (user: User) => {
+    if (!user) return;
+    
+    try {
+      // First try to get profile from database
+      const { data: profileData, error } = await db.getMyProfile();
+      
+      if (profileData && !error) {
+        setProfile(profileData);
+      } else {
+        // Fallback to user metadata if no profile exists yet
+        setProfile({
+          id: user.id,
+          email: user.email || '',
+          full_name: user.user_metadata?.full_name || null,
+          created_at: user.created_at,
+          updated_at: user.updated_at || user.created_at
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      // Fallback to user metadata on error
+      setProfile({
+        id: user.id,
+        email: user.email || '',
+        full_name: user.user_metadata?.full_name || null,
+        created_at: user.created_at,
+        updated_at: user.updated_at || user.created_at
+      });
+    }
+  };
+
   useEffect(() => {
     setMounted(true);
     
@@ -72,38 +104,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (mounted) {
           setLoading(false);
         }
-      }
-    };
-
-    const fetchProfile = async (user: User) => {
-      if (!user) return;
-      
-      try {
-        // First try to get profile from database
-        const { data: profileData, error } = await db.getMyProfile();
-        
-        if (profileData && !error) {
-          setProfile(profileData);
-        } else {
-          // Fallback to user metadata if no profile exists yet
-          setProfile({
-            id: user.id,
-            email: user.email || '',
-            full_name: user.user_metadata?.full_name || null,
-            created_at: user.created_at,
-            updated_at: user.updated_at || user.created_at
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-        // Fallback to user metadata on error
-        setProfile({
-          id: user.id,
-          email: user.email || '',
-          full_name: user.user_metadata?.full_name || null,
-          created_at: user.created_at,
-          updated_at: user.updated_at || user.created_at
-        });
       }
     };
 
