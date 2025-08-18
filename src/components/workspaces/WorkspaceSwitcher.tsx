@@ -46,8 +46,12 @@ export default function WorkspaceSwitcher({ onCreateWorkspace, compact = false }
   if (loading) {
     return (
       <div className={`flex items-center gap-2 px-3 py-2 bg-gray-200 rounded-lg animate-pulse ${
-        compact ? 'w-32' : 'w-48'
-      } h-8`} />
+        compact ? 'max-w-32' : 'max-w-48'
+      } h-10`}>
+        <div className="w-4 h-4 bg-gray-300 rounded" />
+        <div className="flex-1 h-4 bg-gray-300 rounded" />
+        <div className="w-4 h-4 bg-gray-300 rounded" />
+      </div>
     );
   }
 
@@ -59,7 +63,7 @@ export default function WorkspaceSwitcher({ onCreateWorkspace, compact = false }
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors ${
+        className={`flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors h-10 ${
           compact ? 'max-w-32' : 'max-w-48'
         }`}
       >

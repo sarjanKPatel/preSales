@@ -17,8 +17,18 @@ export default function WorkspaceGate({ children, fallback }: WorkspaceGateProps
   const { currentWorkspace, workspaces, loading: workspaceLoading } = useWorkspace();
   const [showCreateModal, setShowCreateModal] = useState(false);
 
+  // DEBUG: Log workspace gate state
+  console.log('[WorkspaceGate] State check:', {
+    user: !!user,
+    authLoading,
+    workspaceLoading,
+    currentWorkspace: currentWorkspace?.id,
+    workspacesCount: workspaces.length
+  });
+
   // Show loading while checking auth or workspace state
   if (authLoading || workspaceLoading) {
+    console.log('[WorkspaceGate] Showing loading state - authLoading:', authLoading, 'workspaceLoading:', workspaceLoading);
     return (
       fallback || (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">

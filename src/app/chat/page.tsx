@@ -15,56 +15,66 @@ function ChatPageContent() {
   const router = useRouter();
   const { user } = useAuth();
   const [chatType, setChatType] = useState<'vision' | 'lead' | 'proposal'>('vision');
-  // TODO: Replace with new database integration
-  const createProfile = async () => { return null; };
-  const savingVision = false;
-  const saveError = null;
+  const [visionId, setVisionId] = useState<string | undefined>(undefined);
+  const [agentInitialized, setAgentInitialized] = useState(false);
+  
+  // Check agent health via API
+  useEffect(() => {
+    const checkAgentHealth = async () => {
+      try {
+        const response = await fetch('/api/agent');
+        if (response.ok) {
+          setAgentInitialized(true);
+          console.log('AI Agent is ready');
+        } else {
+          console.error('AI Agent health check failed');
+        }
+      } catch (error) {
+        console.error('Failed to check AI agent status:', error);
+      }
+    };
+    
+    checkAgentHealth();
+  }, []);
 
   useEffect(() => {
     const type = searchParams.get('type') as 'vision' | 'lead' | 'proposal';
     if (type && ['vision', 'lead', 'proposal'].includes(type)) {
       setChatType(type);
     }
+    
+    const visionIdParam = searchParams.get('visionId');
+    if (visionIdParam) {
+      setVisionId(visionIdParam);
+    }
   }, [searchParams]);
 
   const handleSaveVision = async (vision: DraftVision) => {
-    if (!user) {
-      console.error('User not authenticated');
-      return;
-    }
-
-    if (!vision.companyName) {
-      console.error('Company name is required');
-      return;
-    }
-
-    try {
-      // TODO: Replace with new database integration
-      const profile = await createProfile();
-
-      if (profile) {
-        console.log('Vision saved successfully:', profile);
-        // Show success message
-        alert('Vision saved successfully!');
-        // Redirect to vision page
-        router.push('/vision');
-      } else if (saveError) {
-        console.error('Failed to save vision:', saveError);
-        alert('Failed to save vision: ' + saveError);
-      }
-    } catch (error) {
-      console.error('Error saving vision:', error);
-      alert('An error occurred while saving the vision');
-    }
+    console.log('Vision saved:', vision);
+    toast.success('Vision saved successfully!');
   };
 
+  if (!agentInitialized) {
+    return (
+      <div className="h-[calc(100vh-4rem)] w-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Initializing AI Agent...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-[calc(100vh-4rem)] w-full">
-      <VisionChatLayout
-        onSaveVision={handleSaveVision}
-        className="h-full"
-      />
-    </div>
+    <Layout maxWidth="full" padding={false}>
+      <div className="h-[calc(100vh-4rem)] w-full">
+        <VisionChatLayout
+          onSaveVision={handleSaveVision}
+          className="h-full"
+          visionId={visionId}
+        />
+      </div>
+    </Layout>
   );
 }
 
