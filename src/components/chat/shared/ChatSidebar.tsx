@@ -28,6 +28,8 @@ interface ChatSidebarProps {
   onNewSession: () => void;                          // Create new chat session
   onRenameSession: (sessionId: string) => void;      // Rename existing session
   onDeleteSession: (sessionId: string) => void;      // Delete session
+  loading?: boolean;                                  // Loading state
+  isCreatingSession?: boolean;                        // Creating new session state
 }
 
 export default function ChatSidebar({
@@ -38,7 +40,9 @@ export default function ChatSidebar({
   onSessionSelect,
   onNewSession,
   onRenameSession,
-  onDeleteSession
+  onDeleteSession,
+  loading,
+  isCreatingSession
 }: ChatSidebarProps) {
   const formatTimestamp = (timestamp: string) => {    // Format timestamp for display (relative time)
     const date = new Date(timestamp);
@@ -111,8 +115,10 @@ export default function ChatSidebar({
             className="w-full"
             icon={<Plus className="w-4 h-4" />}
             onClick={onNewSession}
+            loading={isCreatingSession}
+            disabled={isCreatingSession}
           >
-            New Chat
+            {isCreatingSession ? 'Creating...' : 'New Chat'}
           </Button>
         </div>
 

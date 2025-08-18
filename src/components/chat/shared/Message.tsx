@@ -76,7 +76,7 @@ export default function Message({
         <div className={cn(
           "rounded-xl px-4 py-3 glass",
           role === 'user' 
-            ? "bg-primary/80 text-white ml-auto" 
+            ? "bg-primary/20 border border-primary/30 ml-auto" 
             : "bg-white/70"
         )}>
           {isTyping ? (
@@ -88,7 +88,7 @@ export default function Message({
           ) : (
             <p className={cn(
               "text-sm whitespace-pre-wrap",
-              role === 'assistant' && "text-gray-900"
+              role === 'assistant' ? "text-gray-900" : "text-gray-900"
             )}>
               {content}
             </p>

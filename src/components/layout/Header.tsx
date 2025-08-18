@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -20,7 +20,8 @@ import {
 
 export default function Header() {
   const router = useRouter();
-  const { user, profile, signOut } = useAuth();
+  const pathname = usePathname();
+  const { user, profile, signOut, loading: authLoading } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -98,7 +99,10 @@ export default function Header() {
         <div className="flex justify-between items-center h-16 relative">
           {/* Logo and Workspace Switcher */}
           <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-3">
+            <Link 
+              href="/" 
+              className="flex items-center space-x-3 hover:opacity-80 transition-opacity cursor-pointer no-underline"
+            >
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <Brain className="w-5 h-5 text-white" />
               </div>
@@ -106,17 +110,28 @@ export default function Header() {
                 <span className="text-xl font-bold text-gray-900">PropelIQ</span>
                 <span className="text-xs text-gray-500 -mt-1">AI Pre-Sales</span>
               </div>
-            </div>
+            </Link>
             
-            {/* Workspace Switcher - only show when authenticated */}
-            {user && (
-              <div className="hidden md:block">
+            {/* Workspace Switcher - always reserve space to prevent layout shift */}
+            <div className="hidden md:block min-w-[128px]">
+              {authLoading ? (
+                // Show skeleton while auth is loading
+                <div className="flex items-center gap-2 px-3 py-2 bg-gray-200 rounded-lg animate-pulse max-w-32 h-10">
+                  <div className="w-4 h-4 bg-gray-300 rounded" />
+                  <div className="flex-1 h-4 bg-gray-300 rounded" />
+                  <div className="w-4 h-4 bg-gray-300 rounded" />
+                </div>
+              ) : user ? (
+                // Show workspace switcher when authenticated
                 <WorkspaceSwitcher 
                   onCreateWorkspace={handleCreateWorkspace}
                   compact={true}
                 />
-              </div>
-            )}
+              ) : (
+                // Empty space when not authenticated
+                <div className="h-10" />
+              )}
+            </div>
           </div>
 
           {/* Desktop Navigation */}
@@ -149,7 +164,16 @@ export default function Header() {
 
           {/* User Menu */}
           <div className="flex items-center space-x-4">
-            {user ? (
+            {authLoading ? (
+              // Show skeleton while auth is loading
+              <div className="flex items-center space-x-3 p-2">
+                <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse" />
+                <div className="hidden md:block">
+                  <div className="w-20 h-4 bg-gray-200 rounded animate-pulse" />
+                </div>
+                <div className="w-4 h-4 bg-gray-200 rounded animate-pulse" />
+              </div>
+            ) : user ? (
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => showUserMenu ? closeUserMenu() : setShowUserMenu(true)}
