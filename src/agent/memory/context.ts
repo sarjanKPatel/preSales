@@ -29,6 +29,7 @@ export class ContextLoader {
   async loadVisionContext(visionId: string, sessionId: string, workspaceId: string, userId?: string): Promise<AgentContext> {
     try {
       // 1. FIRST - Load vision data (primary source of truth)
+      console.log(`[ContextLoader] Loading vision ${visionId} from database...`);
       const { data: visionData, error: visionError } = await this.supabase
         .from('visions')
         .select('*')
@@ -39,6 +40,13 @@ export class ContextLoader {
       if (visionError || !visionData) {
         throw new Error(`Vision not found: ${visionId}`);
       }
+      
+      console.log('[ContextLoader] Loaded vision data:', {
+        id: visionData.id,
+        company_name: visionData.vision_state?.company_name,
+        completeness_score: visionData.completeness_score,
+        updated_at: visionData.updated_at
+      });
 
       // 2. Get or create session
       let session = await this.getSession(sessionId, workspaceId);

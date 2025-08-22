@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import WorkspaceGate from '@/components/workspaces/WorkspaceGate'; 
+import WorkspaceGate from '@/components/workspaces/WorkspaceGate';
+import WaitlistGate from '@/components/auth/WaitlistGate'; 
 import Layout from '@/components/layout/Layout';
 import ProposalList from '@/components/proposals/ProposalList';
 import CreateProposalModal from '@/components/proposals/CreateProposalModal';
@@ -31,8 +32,9 @@ export default function ProposalsPage() {
 
   return (
     <ProtectedRoute>
-      <WorkspaceGate>
-        <Layout maxWidth="full">
+      <WaitlistGate>
+        <WorkspaceGate>
+          <Layout maxWidth="full">
         <ProposalList
           onCreateProposal={handleCreateProposal}
           onChatAssist={handleChatAssist}
@@ -45,7 +47,8 @@ export default function ProposalsPage() {
           onSuccess={handleProposalCreated}
         />
       </Layout>
-      </WorkspaceGate>
+        </WorkspaceGate>
+      </WaitlistGate>
     </ProtectedRoute>
   );
 }

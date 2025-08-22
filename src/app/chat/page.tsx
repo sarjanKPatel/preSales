@@ -3,6 +3,9 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import WaitlistGate from '@/components/auth/WaitlistGate';
+import WorkspaceGate from '@/components/workspaces/WorkspaceGate';
 import { VisionChatLayout } from '@/components/chat';
 import { DraftVision } from '@/components/chat';
 import { useAuth } from '@/contexts/AuthContext';
@@ -66,15 +69,21 @@ function ChatPageContent() {
   }
 
   return (
-    <Layout maxWidth="full" padding={false}>
-      <div className="h-[calc(100vh-4rem)] w-full">
-        <VisionChatLayout
-          onSaveVision={handleSaveVision}
-          className="h-full"
-          visionId={visionId}
-        />
-      </div>
-    </Layout>
+    <ProtectedRoute>
+      <WaitlistGate>
+        <WorkspaceGate>
+          <Layout maxWidth="full" padding={false}>
+            <div className="h-[calc(100vh-4rem)] w-full">
+              <VisionChatLayout
+                onSaveVision={handleSaveVision}
+                className="h-full"
+                visionId={visionId}
+              />
+            </div>
+          </Layout>
+        </WorkspaceGate>
+      </WaitlistGate>
+    </ProtectedRoute>
   );
 }
 

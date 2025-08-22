@@ -6,10 +6,12 @@ import Button from '@/components/Button';
 import { Mail, Lock, User, Brain, ArrowLeft, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 
 export default function SignupPage() {
   const router = useRouter();
-  const { signUp, loading, user } = useAuth();
+  const { signUp, loading, user, profile } = useAuth();
+  const { workspaces, workspaceLoading } = useWorkspace();
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -18,12 +20,31 @@ export default function SignupPage() {
   const [error, setError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Smart redirect function based on waitlist status and workspace availability
+  const handlePostSignupRedirect = () => {
+    if (!user || loading || workspaceLoading) return;
+
+    // If user is on waitlist, redirect to waitlist page
+    if (profile?.waitlist_status === 'pending') {
+      router.push('/waitlist');
+      return;
+    }
+
+    // If user is approved, redirect to workspace dashboard
+    // WorkspaceGate will handle workspace creation if needed
+    if (profile?.waitlist_status === 'approved') {
+      router.push('/vision');
+      return;
+    }
+
+    // Default fallback - go to landing page
+    router.push('/');
+  };
+
   // Redirect if already logged in
   useEffect(() => {
-    if (user && !loading) {
-      router.push('/');
-    }
-  }, [user, loading, router]);
+    handlePostSignupRedirect();
+  }, [user, profile, workspaces, loading, workspaceLoading]);
 
   const validateForm = () => {
     if (!formData.fullName.trim()) {
@@ -69,8 +90,8 @@ export default function SignupPage() {
           setError(error.message || 'An error occurred during signup');
         }
       } else {
-        // Success - user will be redirected via the useEffect when user state changes
-        router.push('/');
+        // Success - redirect will be handled by useEffect when user state changes
+        // No immediate redirect needed here
       }
     } catch (err: any) {
       setError('An unexpected error occurred. Please try again');

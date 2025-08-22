@@ -63,9 +63,73 @@ export const db = {
 
   // Create workspace
   async createWorkspace(name: string) {
-    return await supabase.rpc('create_workspace', {
-      p_name: name
-    });
+    try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { data: null, error: new Error('User not authenticated') };
+      }
+
+      // Check if workspace name already exists for this user
+      const { data: existingWorkspaces, error: checkError } = await supabase
+        .from('workspaces')
+        .select('name')
+        .eq('created_by', user.id)
+        .eq('name', name);
+
+      if (checkError) {
+        return { data: null, error: checkError };
+      }
+
+      if (existingWorkspaces && existingWorkspaces.length > 0) {
+        return { 
+          data: null, 
+          error: new Error(`Workspace "${name}" already exists. Please choose a different name.`) 
+        };
+      }
+
+      // Create the workspace without slug (let database generate it)
+      const { data: workspace, error: createError } = await supabase
+        .from('workspaces')
+        .insert({
+          name: name,
+          created_by: user.id
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        // Handle specific constraint violations with user-friendly messages
+        if (createError.message?.includes('duplicate key') || 
+            createError.message?.includes('unique constraint') ||
+            createError.message?.includes('workspaces_created_by_name_key')) {
+          return { 
+            data: null, 
+            error: new Error(`Workspace "${name}" already exists. Please choose a different name.`) 
+          };
+        }
+        return { data: null, error: createError };
+      }
+
+      // Add current user as admin member
+      const { error: memberError } = await supabase
+        .from('workspace_members')
+        .insert({
+          workspace_id: workspace.id,
+          user_id: user.id,
+          role: 'admin'
+        });
+
+      if (memberError) {
+        // If adding member fails, try to clean up the workspace
+        await supabase.from('workspaces').delete().eq('id', workspace.id);
+        return { data: null, error: memberError };
+      }
+
+      return { data: workspace, error: null };
+    } catch (error) {
+      return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+    }
   },
 
   // Create workspace invite (for future use)
@@ -171,82 +235,20 @@ export const db = {
 
   // Vision operations
   async getVisions(workspaceId: string) {
-    console.log('[DB] getVisions called with workspaceId:', workspaceId);
-    console.log('[DB] Supabase client status:', !!supabase);
-    
-    // Temporary fix: Skip problematic workspace
-    if (workspaceId === 'bfd546d4-bca1-4a1e-a018-99bb5c951cef') {
-      console.log('[DB] Skipping problematic workspace, returning empty result');
-      return {
-        data: [],
-        error: null,
-        status: 200,
-        statusText: 'OK',
-        count: 0
-      };
-    }
-    
     try {
-      console.log('[DB] Building query...');
-      const query = supabase
+      const result = await supabase
         .from('visions')
         .select('*')
         .eq('workspace_id', workspaceId)
         .order('created_at', { ascending: false });
       
-      console.log('[DB] Query built, executing...');
-      console.log('[DB] Query details:', {
-        table: 'visions',
-        select: '*',
-        filter: `workspace_id = ${workspaceId}`,
-        order: 'created_at desc'
-      });
-      
-      console.log('[DB] About to await query...');
-      console.log('[DB] Query object type:', typeof query);
-      console.log('[DB] Query object:', query);
-      
-      // Try to execute with explicit error handling
-      let result;
-      try {
-        console.log('[DB] Executing query now...');
-        result = await query;
-        console.log('[DB] Query execution completed successfully');
-      } catch (queryError) {
-        console.error('[DB] Query execution failed with error:', queryError);
-        console.error('[DB] Query error type:', typeof queryError);
-        console.error('[DB] Query error constructor:', queryError?.constructor?.name);
-        throw queryError;
-      }
-      
-      console.log('[DB] Query completed!');
-      console.log('[DB] Raw result:', result);
-      console.log('[DB] getVisions result summary:', {
-        data: result.data?.length,
-        error: result.error,
-        status: result.status,
-        statusText: result.statusText,
-        count: result.count
-      });
-      
       if (result.error) {
-        console.error('[DB] getVisions error details:', result.error);
-        console.error('[DB] Error code:', result.error.code);
-        console.error('[DB] Error message:', result.error.message);
-        console.error('[DB] Error details:', result.error.details);
-        console.error('[DB] Error hint:', result.error.hint);
-      }
-      
-      if (result.data) {
-        console.log('[DB] Sample data (first item):', result.data[0]);
+        console.error('[DB] getVisions error:', result.error);
       }
       
       return result;
     } catch (error) {
-      console.error('[DB] getVisions caught exception:', error);
-      console.error('[DB] Exception type:', typeof error);
-      console.error('[DB] Exception constructor:', error?.constructor?.name);
-      console.error('[DB] Exception stack:', error?.stack);
+      console.error('[DB] getVisions exception:', error);
       throw error;
     }
   },
@@ -448,30 +450,53 @@ export const db = {
   },
 
   async createChatMessage(sessionId: string, role: 'user' | 'assistant', content: string, metadata?: any) {
-    const { data: user } = await supabase.auth.getUser();
-    
+    console.log('[DB] createChatMessage called:', {
+      sessionId,
+      role,
+      contentLength: content.length,
+      hasMetadata: !!metadata
+    });
+
+    // Since user_id is nullable in the schema, we can insert messages without auth lookup
+    // For user messages, we'll leave user_id as null for now to avoid the hanging auth issue
+    // The session already has the user_id, so we can track ownership at the session level
     const messageData = {
       session_id: sessionId,
       role,
       content,
-      user_id: role === 'user' ? user?.user?.id : null,
+      user_id: null, // Keep as null to avoid hanging auth calls
       metadata: metadata || {},
     };
 
+    console.log('[DB] Message data prepared:', {
+      ...messageData,
+      content: `${content.substring(0, 50)}...`
+    });
+
+    console.log('[DB] Inserting message into database...');
     const { data, error } = await supabase
       .from('chat_messages')
       .insert(messageData)
       .select()
       .single();
 
-    if (error) throw error;
+    console.log('[DB] Insert result - data:', !!data, 'error:', error);
+
+    if (error) {
+      console.error('[DB] Database insert error for message:', error);
+      throw error;
+    }
 
     // Update session's updated_at timestamp
-    await supabase
+    console.log('[DB] Updating session timestamp...');
+    const updateResult = await supabase
       .from('chat_sessions')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', sessionId);
+    
+    console.log('[DB] Session update result:', updateResult.error || 'success');
 
+    console.log('[DB] createChatMessage completed successfully, returning:', data.id);
     return data;
   },
 

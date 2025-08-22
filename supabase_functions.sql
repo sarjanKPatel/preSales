@@ -99,6 +99,31 @@ BEGIN
 END;
 $$;
 
+-- Function 3: update_vision_state
+-- Simple update function for vision state
+CREATE OR REPLACE FUNCTION public.update_vision_state(
+  p_vision_id UUID,
+  p_state JSONB
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  updated_state JSONB;
+BEGIN
+  UPDATE visions
+  SET 
+    vision_state = vision_state || p_state,
+    updated_at = NOW()
+  WHERE id = p_vision_id
+  RETURNING vision_state INTO updated_state;
+  
+  RETURN updated_state;
+END;
+$$;
+
 -- Grant necessary permissions
 GRANT EXECUTE ON FUNCTION public.get_vision_for_update(UUID, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.update_vision_atomic(UUID, JSONB, INTEGER, UUID, UUID, INTEGER) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.update_vision_state(UUID, JSONB) TO authenticated;

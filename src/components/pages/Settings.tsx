@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import WorkspaceGate from '@/components/workspaces/WorkspaceGate';
+import WaitlistGate from '@/components/auth/WaitlistGate';
 import Layout from '@/components/layout/Layout';
 import SettingsProfile from '@/components/settings/SettingsProfile';
 import SettingsInvites from '@/components/settings/SettingsInvites';
@@ -37,8 +38,9 @@ export default function SettingsPage() {
 
   return (
     <ProtectedRoute>
-      <WorkspaceGate>
-        <Layout padding={false} maxWidth="full">
+      <WaitlistGate>
+        <WorkspaceGate>
+          <Layout padding={false} maxWidth="full">
           <div className="min-h-screen bg-gray-50">
             <div className="flex">
               {/* Sidebar */}
@@ -84,7 +86,8 @@ export default function SettingsPage() {
             </div>
           </div>
         </Layout>
-      </WorkspaceGate>
+        </WorkspaceGate>
+      </WaitlistGate>
     </ProtectedRoute>
   );
 }

@@ -65,6 +65,7 @@ export interface VisionState {
     vision_title?: string;
     vision_category?: string;
     vision_impact?: string;
+    skipped_fields?: string[];
   };
   
   [key: string]: any; // Allow additional fields

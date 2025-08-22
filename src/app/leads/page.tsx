@@ -7,6 +7,7 @@ import Card from '@/components/Card';
 import Button from '@/components/Button';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import WorkspaceGate from '@/components/workspaces/WorkspaceGate';
+import WaitlistGate from '@/components/auth/WaitlistGate';
 import { 
   Plus, 
   Search, 
@@ -77,8 +78,9 @@ export default function LeadsPage() {
 
   return (
     <ProtectedRoute>
-      <WorkspaceGate>
-        <Layout maxWidth="7xl" padding>
+      <WaitlistGate>
+        <WorkspaceGate>
+          <Layout maxWidth="7xl" padding>
         <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -326,7 +328,8 @@ export default function LeadsPage() {
         )}
         </div>
       </Layout>
-      </WorkspaceGate>
+        </WorkspaceGate>
+      </WaitlistGate>
     </ProtectedRoute>
   );
 }

@@ -48,9 +48,25 @@ export default function ChatInput({
   // =============================================
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();  // Prevent default form submission
-    if (message.trim() && !disabled) {  // Only send if message has content and not disabled
-      onSendMessage(message.trim());     // Send trimmed message
+    const trimmedMessage = message.trim();
+    
+    console.log('[ChatInput] handleSubmit called', {
+      hasMessage: !!trimmedMessage,
+      messageLength: trimmedMessage.length,
+      disabled,
+      message: trimmedMessage
+    });
+    
+    if (trimmedMessage && !disabled) {  // Only send if message has content and not disabled
+      console.log('[ChatInput] Sending message:', trimmedMessage);
+      onSendMessage(trimmedMessage);     // Send trimmed message
       setMessage('');                    // Clear input after sending
+      console.log('[ChatInput] Message sent and input cleared');
+    } else {
+      console.log('[ChatInput] Message not sent:', { 
+        trimmedMessage: !!trimmedMessage, 
+        disabled 
+      });
     }
   };
 

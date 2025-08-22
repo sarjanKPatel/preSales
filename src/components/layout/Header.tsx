@@ -96,23 +96,29 @@ export default function Header() {
   return (
     <header className="glass-heavy sticky top-0 z-50 border-b border-white/20">
       <div className="w-full px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16 relative">
-          {/* Logo and Workspace Switcher */}
-          <div className="flex items-center space-x-6">
-            <Link 
-              href="/" 
-              className="flex items-center space-x-3 hover:opacity-80 transition-opacity cursor-pointer no-underline"
-            >
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+        <div className="grid grid-cols-3 items-center h-16 relative">
+          {/* Left: Logo and Workspace Switcher */}
+          <div className="flex items-center space-x-3 sm:space-x-6">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              {/* Icon - links to landing page */}
+              <Link 
+                href="/" 
+                className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center hover:opacity-80 transition-opacity cursor-pointer flex-shrink-0"
+              >
                 <Brain className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xl font-bold text-gray-900">PropelIQ</span>
-                <span className="text-xs text-gray-500 -mt-1">AI Pre-Sales</span>
-              </div>
-            </Link>
+              </Link>
+              
+              {/* Brand text - links to current destination */}
+              <Link 
+                href="/" 
+                className="flex flex-col hover:opacity-80 transition-opacity cursor-pointer no-underline"
+              >
+                <span className="text-lg sm:text-xl font-bold text-gray-900">PropelIQ</span>
+                <span className="text-xs text-gray-500 -mt-1 hidden sm:block">AI Pre-Sales</span>
+              </Link>
+            </div>
             
-            {/* Workspace Switcher - always reserve space to prevent layout shift */}
+            {/* Desktop Workspace Switcher - always reserve space to prevent layout shift */}
             <div className="hidden md:block min-w-[128px]">
               {authLoading ? (
                 // Show skeleton while auth is loading
@@ -134,8 +140,8 @@ export default function Header() {
             </div>
           </div>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
+          {/* Center: Desktop Navigation */}
+          <nav className="hidden md:flex items-center justify-center space-x-6">
             <Link 
               href="/vision" 
               className="text-gray-600 hover:text-primary transition-colors font-medium"
@@ -162,32 +168,32 @@ export default function Header() {
             </Link>
           </nav>
 
-          {/* User Menu */}
-          <div className="flex items-center space-x-4">
+          {/* Right: User Menu */}
+          <div className="flex items-center justify-end space-x-2 sm:space-x-4">
             {authLoading ? (
               // Show skeleton while auth is loading
-              <div className="flex items-center space-x-3 p-2">
+              <div className="flex items-center space-x-2 sm:space-x-3 p-2">
                 <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse" />
-                <div className="hidden md:block">
+                <div className="hidden sm:block">
                   <div className="w-20 h-4 bg-gray-200 rounded animate-pulse" />
                 </div>
-                <div className="w-4 h-4 bg-gray-200 rounded animate-pulse" />
+                <div className="w-4 h-4 bg-gray-200 rounded animate-pulse hidden sm:block" />
               </div>
             ) : user ? (
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => showUserMenu ? closeUserMenu() : setShowUserMenu(true)}
-                  className="flex items-center space-x-3 p-2 rounded-lg glass hover:bg-white/20 transition-all"
+                  className="flex items-center space-x-2 sm:space-x-3 p-1 sm:p-2 rounded-lg glass hover:bg-white/20 transition-all"
                 >
                   <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
                     <User className="w-4 h-4 text-primary-600" />
                   </div>
-                  <div className="hidden md:block text-left">
+                  <div className="hidden sm:block text-left">
                     <div className="text-sm font-medium text-gray-900">
                       {profile?.full_name ? profile.full_name.split(' ')[0] : user.email?.split('@')[0]}
                     </div>
                   </div>
-                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                  <ChevronDown className="w-4 h-4 text-gray-400 hidden sm:block" />
                 </button>
 
                 {/* Dropdown Menu */}
@@ -251,6 +257,19 @@ export default function Header() {
           <div className={`md:hidden border-t border-white/20 py-4 glass transform transition-all duration-150 ease-out ${
             isMobileMenuClosing ? 'animate-slide-up' : 'animate-slide-down'
           }`} ref={mobileMenuRef}>
+            {/* Mobile Workspace Switcher */}
+            {user && (
+              <div className="px-2 pb-4 border-b border-white/20 mb-4">
+                <WorkspaceSwitcher 
+                  onCreateWorkspace={() => {
+                    handleCreateWorkspace();
+                    closeMobileMenu();
+                  }}
+                  compact={false}
+                />
+              </div>
+            )}
+            
             <nav className="flex flex-col space-y-3">
               <Link 
                 href="/vision"

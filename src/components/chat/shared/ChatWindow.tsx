@@ -29,8 +29,13 @@ export default function ChatWindow({
   };
 
   useEffect(() => {
+    console.log('[ChatWindow] Messages updated:', {
+      messageCount: messages.length,
+      isLoading,
+      lastMessage: messages[messages.length - 1]?.content?.substring(0, 50)
+    });
     scrollToBottom();
-  }, [messages]);
+  }, [messages, isLoading]);
 
   const handleRegenerate = (messageId: string) => {
     onRegenerateMessage?.(messageId);
@@ -94,7 +99,10 @@ export default function ChatWindow({
 
       {/* Input Area */}
       <ChatInput
-        onSendMessage={onSendMessage}
+        onSendMessage={(message) => {
+          console.log('[ChatWindow] onSendMessage called with:', message);
+          onSendMessage(message);
+        }}
         disabled={isLoading}
         placeholder="Ask about vision, leads, or proposals..."
       />

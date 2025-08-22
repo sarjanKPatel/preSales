@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import WorkspaceGate from '@/components/workspaces/WorkspaceGate'; 
+import WorkspaceGate from '@/components/workspaces/WorkspaceGate';
+import WaitlistGate from '@/components/auth/WaitlistGate'; 
 
 // Extended type for proposal with relations
 interface ProposalWithRelations {
@@ -291,8 +292,9 @@ export default function ProposalDetailPage() {
 
   return (
     <ProtectedRoute>
-      <WorkspaceGate>
-        <Layout padding={false} maxWidth="full" className="h-full">
+      <WaitlistGate>
+        <WorkspaceGate>
+          <Layout padding={false} maxWidth="full" className="h-full">
       <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)] w-full" ref={containerRef}>
         {/* Chat Panel - Left Side on desktop, stacked on mobile */}
         <div 
@@ -628,7 +630,8 @@ export default function ProposalDetailPage() {
         </div>
       </div>
     </Layout>
-      </WorkspaceGate>
+        </WorkspaceGate>
+      </WaitlistGate>
     </ProtectedRoute>
   );
 }

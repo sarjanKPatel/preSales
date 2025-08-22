@@ -14,15 +14,23 @@ import type { Vision } from '@/types';
 interface VisionCardProps {
   vision: Vision;
   onChat?: (vision: Vision) => void;
+  onView?: (vision: Vision) => void;
+  onEdit?: (vision: Vision) => void;
   onDelete?: (vision: Vision) => void;
   onRename?: (vision: Vision, newTitle: string) => void;
 }
 
-const VisionCard = memo(function VisionCard({ vision, onChat, onDelete, onRename }: VisionCardProps) {
+const VisionCard = memo(function VisionCard({ vision, onChat, onView, onEdit, onDelete, onRename }: VisionCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(vision.title);
 
-  const handleChat = () => onChat?.(vision);
+  const handleChat = () => {
+    if (onView) {
+      onView(vision);
+    } else if (onChat) {
+      onChat(vision);
+    }
+  };
   
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -33,8 +41,12 @@ const VisionCard = memo(function VisionCard({ vision, onChat, onDelete, onRename
   
   const handleEditStart = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsEditing(true);
-    setEditTitle(vision.title);
+    if (onEdit) {
+      onEdit(vision);
+    } else {
+      setIsEditing(true);
+      setEditTitle(vision.title);
+    }
   };
   
   const handleEditSave = (e: React.MouseEvent) => {

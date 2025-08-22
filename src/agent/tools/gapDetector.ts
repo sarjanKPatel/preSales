@@ -60,8 +60,23 @@ export class GapDetector implements Tool<GapDetectorInput, GapDetectorOutput> {
     try {
       const { vision_state, context = [] } = input;
 
+      console.log('[GapDetector] Input:', {
+        hasVisionState: !!vision_state,
+        companyName: vision_state?.company_name,
+        industry: vision_state?.industry,
+        visionStatement: !!vision_state?.vision_statement,
+        contextLength: context.length
+      });
+
       // Perform multi-dimensional gap analysis
       const gapResult = this.analyzeGaps(vision_state, context);
+      
+      console.log('[GapDetector] Analysis result:', {
+        criticalGaps: gapResult.critical_gaps,
+        enhancementOpportunities: gapResult.enhancement_opportunities,
+        completenessScore: gapResult.completeness_score,
+        nextQuestionsCount: gapResult.next_questions.length
+      });
       
       // Build legacy GapAnalysis format for backward compatibility
       const analysis: GapAnalysis = {
