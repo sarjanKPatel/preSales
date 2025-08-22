@@ -1,8 +1,27 @@
 import { LLMMessage, LLMOptions, LLMResponse } from '../../types';
 
+export interface EmbeddingRequest {
+  input: string | string[];
+  model: string;
+  dimensions?: number;
+}
+
+export interface EmbeddingResponse {
+  data: Array<{
+    embedding: number[];
+    index: number;
+  }>;
+  model: string;
+  usage: {
+    prompt_tokens: number;
+    total_tokens: number;
+  };
+}
+
 export interface LLMProvider {
   name: string;
   complete(prompt: string | LLMMessage[], options?: LLMOptions): Promise<LLMResponse>;
+  createEmbedding?(request: EmbeddingRequest): Promise<EmbeddingResponse>;
   getAvailableModels(): string[];
   validateApiKey(): Promise<boolean>;
 }
@@ -18,6 +37,8 @@ export class OpenAIProvider implements LLMProvider {
     
     if (!this.apiKey) {
       console.warn('[OpenAIProvider] No API key provided. Set OPENAI_API_KEY environment variable.');
+    } else {
+      console.log('[OpenAIProvider] Initialized with API key:', this.apiKey.substring(0, 10) + '...');
     }
   }
 
@@ -79,6 +100,50 @@ export class OpenAIProvider implements LLMProvider {
   }
 
 
+  async createEmbedding(request: EmbeddingRequest): Promise<EmbeddingResponse> {
+    try {
+      console.log('[OpenAIProvider] Creating embedding with model:', request.model);
+      console.log('[OpenAIProvider] API Key available:', !!this.apiKey);
+      
+      if (!this.apiKey) {
+        throw new Error('OpenAI API key is not configured. Please set OPENAI_API_KEY environment variable.');
+      }
+      
+      const response = await fetch(`${this.baseUrl}/embeddings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          input: request.input,
+          model: request.model,
+          dimensions: request.dimensions,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = 'Unknown error';
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error?.message || errorText;
+        } catch {
+          errorMessage = errorText;
+        }
+        console.error('[OpenAIProvider] Embedding API error:', response.status, errorMessage);
+        throw new Error(`OpenAI API error (${response.status}): ${errorMessage}`);
+      }
+
+      const data = await response.json();
+      console.log('[OpenAIProvider] Embedding created successfully');
+      return data;
+    } catch (error) {
+      console.error('[OpenAIProvider] Embedding request failed:', error);
+      throw error;
+    }
+  }
+
   getAvailableModels(): string[] {
     return [
       'gpt-4-turbo',
@@ -87,6 +152,8 @@ export class OpenAIProvider implements LLMProvider {
       'gpt-4-turbo-preview',
       'gpt-4-0125-preview',
       'gpt-3.5-turbo-0125',
+      'gpt-4o',
+      'gpt-4o-mini',
     ];
   }
 

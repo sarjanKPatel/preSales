@@ -3,6 +3,11 @@ import { ToolResult } from '../../types';
 import { GapDetector } from './gapDetector';
 import { VisionStateManager } from './visionState';
 import { InformationExtractor } from './informationExtractor';
+import { IntentClassifier } from './IntentClassifier';
+import { QuestionAnswering } from './QuestionAnswering';
+import { ResponseFormatter } from './ResponseFormatter';
+import { VisionFinalizer } from './VisionFinalizer';
+import { UIActionHandler } from './UIActionHandler';
 import { LLMProvider, OpenAIProvider } from '../llm/provider';
 
 // Tool Registry Implementation
@@ -74,6 +79,15 @@ export function initializeTools(llmProvider?: LLMProvider): void {
     toolRegistry.register(new GapDetector());
     toolRegistry.register(new VisionStateManager());
     toolRegistry.register(new InformationExtractor(openaiProvider));
+    toolRegistry.register(new IntentClassifier(openaiProvider));
+    
+    // Question answering and response tools
+    toolRegistry.register(new QuestionAnswering(openaiProvider));
+    toolRegistry.register(new ResponseFormatter());
+    
+    // Finalization and UI tools
+    toolRegistry.register(new VisionFinalizer());
+    toolRegistry.register(new UIActionHandler());
   } catch (error) {
     console.error('[Tools] Failed to initialize tools:', error);
     throw error;
@@ -84,7 +98,16 @@ export function initializeTools(llmProvider?: LLMProvider): void {
 initializeTools();
 
 // Export tool classes for direct use
-export { GapDetector, VisionStateManager, InformationExtractor };
+export { 
+  GapDetector, 
+  VisionStateManager, 
+  InformationExtractor, 
+  IntentClassifier,
+  QuestionAnswering,
+  ResponseFormatter,
+  VisionFinalizer,
+  UIActionHandler
+};
 
 // Export types
 export * from './types';

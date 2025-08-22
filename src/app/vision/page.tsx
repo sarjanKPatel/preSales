@@ -6,6 +6,7 @@ import Layout from '@/components/layout/Layout';
 import Button from '@/components/Button';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import WorkspaceGate from '@/components/workspaces/WorkspaceGate';
+import WaitlistGate from '@/components/auth/WaitlistGate';
 import { Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
@@ -155,8 +156,9 @@ export default function CompanyVisionPage() {
 
   return (
     <ProtectedRoute>
-      <WorkspaceGate>
-        <Layout maxWidth="7xl" padding>
+      <WaitlistGate>
+        <WorkspaceGate>
+          <Layout maxWidth="7xl" padding>
           <div className="space-y-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -246,7 +248,8 @@ export default function CompanyVisionPage() {
             loading={createLoading}
           />
         </Layout>
-      </WorkspaceGate>
+        </WorkspaceGate>
+      </WaitlistGate>
     </ProtectedRoute>
   );
 }

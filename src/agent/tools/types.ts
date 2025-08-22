@@ -1,5 +1,9 @@
 import { ToolResult, GapAnalysis, VisionMetadata, VisionState } from '../../types';
 
+// Re-export ToolResult for tools to use
+export type { ToolResult };
+
+
 // Base Tool Interface
 export interface Tool<TInput = any, TOutput = any> {
   name: string;

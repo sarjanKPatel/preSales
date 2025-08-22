@@ -21,19 +21,25 @@ async function ensureAgentInitialized() {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('[API] POST request received');
     const body = await request.json();
     const { sessionId, userMessage, userId, workspaceId, visionId } = body;
 
-    console.log('[API] Received request:', {
+    console.log('[API] Request body parsed, received request:', {
       sessionId: sessionId ? `${sessionId.substring(0, 8)}...` : 'undefined',
-      userMessage: userMessage ? `${userMessage.substring(0, 20)}...` : 'undefined',
+      userMessage: userMessage ? `${userMessage.substring(0, 50)}...` : 'undefined',
       userId: userId ? `${userId.substring(0, 8)}...` : 'undefined',
       workspaceId: workspaceId ? `${workspaceId.substring(0, 8)}...` : 'undefined',
-      visionId: visionId ? `${visionId.substring(0, 8)}...` : 'undefined'
+      visionId: visionId ? `${visionId.substring(0, 8)}...` : 'undefined',
+      bodyKeys: Object.keys(body)
     });
 
     // Validate required fields
     if (!sessionId || !userMessage) {
+      console.error('[API] Validation failed - missing required fields:', {
+        hasSessionId: !!sessionId,
+        hasUserMessage: !!userMessage
+      });
       return NextResponse.json(
         { error: 'Missing required fields: sessionId, userMessage' },
         { status: 400 }
@@ -41,9 +47,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Ensure agent is initialized
+    console.log('[API] Ensuring agent is initialized...');
     await ensureAgentInitialized();
+    console.log('[API] Agent initialized successfully');
 
     // Process the message using the initialized agent
+    console.log('[API] Starting agent processing...');
     const streamGenerator = agent.handleTurn({
       sessionId,
       userMessage,
@@ -53,15 +62,26 @@ export async function POST(request: NextRequest) {
     });
 
     // Collect the streamed response
+    console.log('[API] Collecting streamed response...');
     let response = '';
+    let chunkCount = 0;
     for await (const chunk of streamGenerator) {
+      chunkCount++;
+      console.log(`[API] Processing chunk ${chunkCount}:`, {
+        type: chunk.type,
+        hasContent: !!chunk.content,
+        contentLength: chunk.content?.length || 0
+      });
+      
       if (chunk.type === 'token' && chunk.content) {
         response += chunk.content;
       } else if (chunk.type === 'error') {
+        console.error('[API] Agent error chunk received:', chunk.error);
         throw new Error(chunk.error || 'Agent processing failed');
       }
     }
 
+    console.log('[API] Agent processing completed, response length:', response.length);
     return NextResponse.json({ response });
   } catch (error) {
     console.error('[API] Agent processing failed:', error);

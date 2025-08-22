@@ -30,6 +30,7 @@ interface WorkspaceContextType {
   workspaces: Workspace[];
   currentUserRole: 'viewer' | 'member' | 'admin' | null;
   loading: boolean;
+  workspaceLoading: boolean;
   error: string | null;
   setCurrentWorkspace: (workspace: Workspace) => void;
   refreshWorkspaces: () => Promise<void>;
@@ -50,7 +51,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   const refreshWorkspaces = async () => {
+    console.log('[WorkspaceContext] refreshWorkspaces called, user:', !!user);
     if (!user) {
+      console.log('[WorkspaceContext] No user, clearing workspaces');
       setWorkspaces([]);
       setCurrentWorkspace(null);
       setCurrentUserRole(null);
@@ -59,15 +62,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      console.log('[WorkspaceContext] Fetching memberships...');
       setError(null);
       const { data, error } = await db.getMyMemberships();
       
       if (error) {
+        console.error('[WorkspaceContext] Error fetching memberships:', error);
         setError(error.message);
         setWorkspaces([]);
         setCurrentWorkspace(null);
         setCurrentUserRole(null);
       } else if (data) {
+        console.log('[WorkspaceContext] Found memberships:', data.length);
         // Convert memberships to workspaces format
         const workspaceData = data.map(membership => ({
           id: membership.workspace_id,
@@ -109,8 +115,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err: any) {
       setError('Failed to load workspaces');
-      console.error('Error loading workspaces:', err);
+      console.error('[WorkspaceContext] Error loading workspaces:', err);
     } finally {
+      console.log('[WorkspaceContext] Setting loading to false');
       setLoading(false);
     }
   };
@@ -123,7 +130,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await db.createWorkspace(name);
       
       if (error) {
-        setError(error.message);
+        setError(typeof error === 'string' ? error : error.message || 'Unknown error');
         return { error };
       } else if (data) {
         // Add the new workspace to the current list immediately
@@ -268,20 +275,55 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    console.log('[WorkspaceContext] useEffect triggered - authLoading:', authLoading, 'user:', !!user);
     if (!authLoading && user) {
+      console.log('[WorkspaceContext] Auth loaded with user, refreshing workspaces');
       refreshWorkspaces();
     } else if (!authLoading && !user) {
+      console.log('[WorkspaceContext] Auth loaded without user, clearing state');
       setWorkspaces([]);
       setCurrentWorkspace(null);
       setLoading(false);
+    } else {
+      console.log('[WorkspaceContext] Still waiting for auth to load');
     }
   }, [user, authLoading]);
+
+  // Debug log the combined loading state (only when not loading)
+  const combinedLoading = authLoading || loading;
+  
+  // Only log when we have meaningful data (not during initial load)
+
+    console.log('[WorkspaceContext] State:', {
+      authLoading,
+      workspaceLoading: loading,
+      combinedLoading,
+      hasUser: !!user,
+      workspacesCount: workspaces.length,
+      currentWorkspace: currentWorkspace?.name || 'None selected',
+      currentWorkspaceId: currentWorkspace?.id
+    });
+  
+
+  // Log when everything is fully loaded
+  useEffect(() => {
+    if (!authLoading && !loading && user && currentWorkspace) {
+      console.log('[WorkspaceContext] ✅ FULLY LOADED:', {
+        user: user.email,
+        currentWorkspace: currentWorkspace.name,
+        workspaceId: currentWorkspace.id,
+        userRole: currentUserRole,
+        totalWorkspaces: workspaces.length
+      });
+    }
+  }, [authLoading, loading, user, currentWorkspace, currentUserRole, workspaces.length]);
 
   const value: WorkspaceContextType = {
     currentWorkspace,
     workspaces,
     currentUserRole,
-    loading: authLoading || loading,
+    loading: combinedLoading,
+    workspaceLoading: loading,
     error,
     setCurrentWorkspace,
     refreshWorkspaces,

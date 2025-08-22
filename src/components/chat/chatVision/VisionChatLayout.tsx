@@ -37,16 +37,37 @@ export default function VisionChatLayout({
   const [chatWidth, setChatWidth] = useState(66);
   const [sessions, setSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [isCreatingSession, setIsCreatingSession] = useState(false);
 
   // Message handler for the agent response hook
   const handleNewMessage = useCallback((message: any) => {
-    setMessages(prev => [...prev, {
-      id: message.id,
-      content: message.content,
+    console.log('[VisionChatLayout] handleNewMessage called:', {
+      messageId: message.id,
       role: message.role,
-      timestamp: message.timestamp,
-    }]);
+      content: message.content?.substring(0, 50) + '...',
+      timestamp: message.timestamp
+    });
+
+    setMessages(prev => {
+      console.log('[VisionChatLayout] Current messages count:', prev.length);
+      
+      // Prevent duplicate messages
+      const messageExists = prev.some(m => m.id === message.id);
+      if (messageExists) {
+        console.log('[VisionChatLayout] Message already exists, skipping:', message.id);
+        return prev;
+      }
+      
+      const newMessage = {
+        id: message.id,
+        content: message.content,
+        role: message.role,
+        timestamp: message.timestamp,
+      };
+      
+      const newMessages = [...prev, newMessage];
+      console.log('[VisionChatLayout] Adding new message, total count:', newMessages.length);
+      return newMessages;
+    });
   }, []);
 
   const { sendMessage, loading: isGenerating } = useAgentResponse({
@@ -54,6 +75,15 @@ export default function VisionChatLayout({
     visionId: visionId,
     onMessage: handleNewMessage,
   });
+
+  // Debug: Log when sendMessage function changes
+  useEffect(() => {
+    console.log('[VisionChatLayout] sendMessage function changed:', {
+      hasSendMessage: !!sendMessage,
+      activeSessionId,
+      timestamp: new Date().toISOString()
+    });
+  }, [sendMessage, activeSessionId]);
   
   // Load sessions when component mounts or visionId changes
   const loadSessions = useCallback(async () => {
@@ -113,40 +143,16 @@ export default function VisionChatLayout({
 
   // Session management functions
   const createSession = useCallback(async () => {
-    console.log('[VisionChatLayout] createSession called');
-    console.log('[VisionChatLayout] currentWorkspace:', currentWorkspace?.id, 'visionId:', visionId);
-    
-    if (!currentWorkspace) {
-      console.error('[VisionChatLayout] No workspace selected');
-      return null;
-    }
+    if (!currentWorkspace) return null;
     
     try {
-      console.log('[VisionChatLayout] Calling db.createChatSession with workspace:', currentWorkspace.id, 'visionId:', visionId);
       const newSession = await db.createChatSession(currentWorkspace.id, visionId);
-      console.log('[VisionChatLayout] db.createChatSession result:', newSession);
-      
-      if (!newSession) {
-        console.error('[VisionChatLayout] Session creation returned null');
-        throw new Error('Session creation returned null');
-      }
-      
-      console.log('[VisionChatLayout] Updating sessions state with new session');
-      setSessions(prev => {
-        console.log('[VisionChatLayout] Previous sessions:', prev.length);
-        const updated = [newSession, ...prev];
-        console.log('[VisionChatLayout] Updated sessions:', updated.length);
-        return updated;
-      });
-      
-      console.log('[VisionChatLayout] Setting active session ID:', newSession.id);
+      setSessions(prev => [newSession, ...prev]);
       setActiveSessionId(newSession.id);
       setMessages([]);
-      
-      console.log('[VisionChatLayout] createSession completed successfully');
       return newSession;
     } catch (error) {
-      console.error('[VisionChatLayout] Failed to create session:', error);
+      console.error('Failed to create session:', error);
       return null;
     }
   }, [currentWorkspace, visionId]);
@@ -168,86 +174,39 @@ export default function VisionChatLayout({
   }, []);
 
   const deleteSession = useCallback(async (sessionId: string) => {
-    console.log('[VisionChatLayout] deleteSession called with sessionId:', sessionId);
-    console.log('[VisionChatLayout] Current activeSessionId:', activeSessionId);
-    console.log('[VisionChatLayout] Current sessions count:', sessions.length);
-    
     try {
-      console.log('[VisionChatLayout] Calling db.deleteChatSession...');
-      const result = await db.deleteChatSession(sessionId);
-      console.log('[VisionChatLayout] Delete result:', result);
-      
-      console.log('[VisionChatLayout] Updating sessions state...');
-      setSessions(prev => {
-        const filtered = prev.filter(session => session.id !== sessionId);
-        console.log('[VisionChatLayout] Sessions before filter:', prev.length, 'after filter:', filtered.length);
-        return filtered;
-      });
+      await db.deleteChatSession(sessionId);
+      setSessions(prev => prev.filter(session => session.id !== sessionId));
       
       // If deleted session was active, select another session
       if (activeSessionId === sessionId) {
-        console.log('[VisionChatLayout] Deleted session was active, selecting new session...');
         const remainingSessions = sessions.filter(s => s.id !== sessionId);
-        console.log('[VisionChatLayout] Remaining sessions:', remainingSessions.length);
-        
         if (remainingSessions.length > 0) {
-          console.log('[VisionChatLayout] Setting new active session:', remainingSessions[0].id);
           setActiveSessionId(remainingSessions[0].id);
         } else {
-          console.log('[VisionChatLayout] No remaining sessions, clearing active session');
           setActiveSessionId(undefined);
           setMessages([]);
         }
       }
-      
-      console.log('[VisionChatLayout] Delete session completed successfully');
     } catch (error) {
-      console.error('[VisionChatLayout] Failed to delete session:', error);
+      console.error('Failed to delete session:', error);
     }
   }, [activeSessionId, sessions]);
 
-  const refreshSessions = useCallback(() => {
-    loadSessions();
-  }, [loadSessions]);
-
-  const refreshActiveSession = useCallback(() => {
-    loadMessages();
-  }, [loadMessages]);
+ 
 
   // Get active session object
   const activeSession = sessions.find(s => s.id === activeSessionId) || null;
 
   const handleNewSession = async () => {
-    console.log('[VisionChatLayout] handleNewSession called');
-    console.log('[VisionChatLayout] user:', !!user, 'isCreatingSession:', isCreatingSession);
+    if (!user) return;
     
-    if (!user || isCreatingSession) {
-      console.log('[VisionChatLayout] Blocking session creation - no user or already creating');
-      return;
-    }
+    const newSession = await createSession();
     
-    console.log('[VisionChatLayout] Setting isCreatingSession to true');
-    setIsCreatingSession(true);
-    
-    try {
-      console.log('[VisionChatLayout] Calling createSession...');
-      const newSession = await createSession();
-      console.log('[VisionChatLayout] createSession result:', newSession);
-      
-      if (newSession) {
-        console.log('[VisionChatLayout] New session created successfully, setting active session');
-        setActiveSessionId(newSession.id);
-        setMessages([]);
-        setDraftVision({});
-        console.log('[VisionChatLayout] Session setup complete');
-      } else {
-        console.error('[VisionChatLayout] Failed to create new session - createSession returned null');
-      }
-    } catch (error) {
-      console.error('[VisionChatLayout] Error creating session:', error);
-    } finally {
-      console.log('[VisionChatLayout] Setting isCreatingSession to false');
-      setIsCreatingSession(false);
+    if (newSession) {
+      setActiveSessionId(newSession.id);
+      setMessages([]);
+      setDraftVision({});
     }
   };
 
@@ -265,19 +224,108 @@ export default function VisionChatLayout({
   };
 
   const handleDeleteSession = async (sessionId: string) => {
-    console.log('[VisionChatLayout] handleDeleteSession called with sessionId:', sessionId);
     await deleteSession(sessionId);
   };
 
   const handleSendMessage = useCallback(async (content: string) => {
-    if (!activeSessionId) return;
+    console.log('[VisionChatLayout] handleSendMessage called:', {
+      content,
+      activeSessionId,
+      hasSendMessage: !!sendMessage,
+      sendMessageFunctionId: sendMessage.toString().substring(0, 50) + '...'
+    });
+
+    let sessionIdToUse = activeSessionId;
+
+    // Auto-create session if none exists
+    if (!activeSessionId) {
+      console.log('[VisionChatLayout] No active session, auto-creating new session...');
+      try {
+        const newSession = await createSession();
+        if (!newSession) {
+          console.error('[VisionChatLayout] Failed to create new session');
+          return;
+        }
+        console.log('[VisionChatLayout] New session created:', newSession.id);
+        sessionIdToUse = newSession.id;
+        
+        // Since state update is async, we need to manually handle the first message
+        // Create user message in database
+        console.log('[VisionChatLayout] Creating user message for new session...');
+        if (!sessionIdToUse) {
+          console.error('[VisionChatLayout] No session ID available');
+          return;
+        }
+        const userMessage = await db.createChatMessage(sessionIdToUse, 'user', content);
+        
+        // Add to UI immediately
+        const userMessageObj = {
+          id: userMessage.id,
+          content: content,
+          role: 'user' as const,
+          timestamp: userMessage.created_at,
+        };
+        handleNewMessage(userMessageObj);
+        
+        // Call API for AI response
+        console.log('[VisionChatLayout] Sending API request for new session...');
+        const response = await fetch('/api/agent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: sessionIdToUse,
+            userMessage: content,
+            workspaceId: currentWorkspace?.id,
+            userId: user?.id,
+            visionId: visionId,
+          }),
+        });
+        
+        if (response.ok) {
+          const { response: agentResponse } = await response.json();
+          
+          // Create assistant message
+          if (!sessionIdToUse) {
+            console.error('[VisionChatLayout] No session ID available for assistant message');
+            return;
+          }
+          const assistantMessage = await db.createChatMessage(sessionIdToUse, 'assistant', agentResponse);
+          
+          // Add to UI
+          const assistantMessageObj = {
+            id: assistantMessage.id,
+            content: agentResponse,
+            role: 'assistant' as const,
+            timestamp: assistantMessage.created_at,
+          };
+          handleNewMessage(assistantMessageObj);
+        }
+        
+        console.log('[VisionChatLayout] Message sent to new session successfully');
+        return;
+      } catch (error) {
+        console.error('[VisionChatLayout] Failed to create session or send message:', error);
+        return;
+      }
+    }
     
     try {
+      console.log('[VisionChatLayout] Calling sendMessage with existing session:', sessionIdToUse);
       await sendMessage(content);
+      console.log('[VisionChatLayout] sendMessage completed successfully');
     } catch (error) {
-      console.error('Failed to send message:', error);
+      console.error('[VisionChatLayout] Failed to send message:', error);
     }
-  }, [activeSessionId, sendMessage]);
+  }, [activeSessionId, sendMessage, createSession, handleNewMessage, currentWorkspace, user, visionId]);
+
+  // Debug: Log when handleSendMessage function is recreated
+  useEffect(() => {
+    console.log('[VisionChatLayout] handleSendMessage function recreated:', {
+      activeSessionId,
+      hasSendMessage: !!sendMessage,
+      timestamp: new Date().toISOString()
+    });
+  }, [handleSendMessage]);
 
   const handleRegenerateMessage = (messageId: string) => { // Regenerate AI response for specific message
     const messageIndex = messages.findIndex(m => m.id === messageId);
@@ -308,7 +356,6 @@ export default function VisionChatLayout({
         onRenameSession={handleRenameSession}
         onDeleteSession={handleDeleteSession}
         loading={loading}
-        isCreatingSession={isCreatingSession}
       />
 
       {/* Main Content Area */}

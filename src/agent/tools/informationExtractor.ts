@@ -19,8 +19,17 @@ export class InformationExtractor implements Tool<InformationExtractorInput, Inf
     try {
       const { user_message, current_vision, session_context = [] } = input;
 
+      console.log('[InformationExtractor] Input:', {
+        message: user_message,
+        hasCurrentVision: !!current_vision,
+        currentCompanyName: current_vision?.company_name,
+        sessionContextLength: session_context.length
+      });
+
       // Build extraction prompt
       const prompt = this.buildExtractionPrompt(user_message, current_vision, session_context);
+      
+      console.log('[InformationExtractor] Sending to LLM for extraction...');
       
       // Get LLM response
       const response = await this.llmProvider.complete(prompt, {
@@ -29,10 +38,12 @@ export class InformationExtractor implements Tool<InformationExtractorInput, Inf
         temperature: 0.1, // Low temperature for consistent extraction
       });
 
+      console.log('[InformationExtractor] Raw LLM response:', response.content);
+
       // Parse structured response
       const extractionResult = this.parseExtractionResponse(response.content);
       
-      console.log('[Extraction] Result:', JSON.stringify(extractionResult, null, 2));
+      console.log('[InformationExtractor] Extraction Result:', JSON.stringify(extractionResult, null, 2));
       
       // Calculate metadata
       const metadata = {

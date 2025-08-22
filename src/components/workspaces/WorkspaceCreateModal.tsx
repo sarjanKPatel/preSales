@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import Button from '@/components/Button';
-import { X, Building2, AlertCircle } from 'lucide-react';
+import { X, Building2, Sparkles, ArrowRight, AlertCircle } from 'lucide-react';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 
 interface WorkspaceCreateModalProps {
@@ -16,12 +17,30 @@ export default function WorkspaceCreateModal({ isOpen, onClose, onSuccess }: Wor
   const [name, setName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string>('');
+  const [isMounted, setIsMounted] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      setName('');
+      setError('');
+      // Focus input after a brief delay to ensure modal is rendered
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+      // Prevent body scroll
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
     }
+
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
   }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -67,90 +86,199 @@ export default function WorkspaceCreateModal({ isOpen, onClose, onSuccess }: Wor
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !isMounted) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+  const modalContent = (
+    <div 
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+      style={{ 
+        background: 'rgba(15, 23, 42, 0.8)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+      }}
+      onClick={(e) => e.target === e.currentTarget && handleClose()}
+    >
       <div 
-        className="bg-white rounded-lg shadow-xl w-full max-w-md"
+        className="w-full max-w-md rounded-2xl border border-white/20"
+        style={{
+          background: 'rgba(255, 255, 255, 0.15)',
+          backdropFilter: 'blur(20px) saturate(180%)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+          animation: 'modalSlideIn 0.3s ease-out'
+        }}
         onKeyDown={handleKeyDown}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
+        onClick={(e) => e.stopPropagation()}
       >
+        {/* Animated Background Elements */}
+        <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
+          <div 
+            className="absolute -top-4 -right-4 w-20 h-20 rounded-full opacity-10"
+            style={{ 
+              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              animation: 'float 6s ease-in-out infinite'
+            }}
+          />
+          <div 
+            className="absolute -bottom-4 -left-4 w-24 h-24 rounded-full opacity-5"
+            style={{ 
+              background: 'linear-gradient(135deg, #06b6d4, #3b82f6)',
+              animation: 'float 8s ease-in-out infinite reverse'
+            }}
+          />
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
-              <Building2 className="w-4 h-4 text-primary" />
-            </div>
-            <h2 id="modal-title" className="text-lg font-semibold text-gray-900">
-              Create workspace
-            </h2>
-          </div>
+        <div className="relative px-8 pt-8 pb-6 text-center">
           <button
             onClick={handleClose}
             disabled={isSubmitting}
-            className="p-1 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+            className="absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-full hover:scale-105 transition-all duration-300 disabled:opacity-50 group"
+            style={{
+              background: 'rgba(255, 255, 255, 0.2)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.3)'
+            }}
             aria-label="Close modal"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5 text-white group-hover:text-gray-100" />
           </button>
+
+          <div className="mb-6">
+            <div 
+              className="w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-4 hover:scale-105 transition-transform duration-300"
+              style={{
+                background: 'rgba(99, 102, 241, 0.8)',
+                backdropFilter: 'blur(10px)',
+                boxShadow: '0 8px 32px rgba(99, 102, 241, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                border: '1px solid rgba(255, 255, 255, 0.2)'
+              }}
+            >
+              <Sparkles className="w-8 h-8 text-white animate-pulse" />
+            </div>
+            
+            <h2 id="modal-title" className="text-2xl font-bold text-white mb-2">
+              Create Your Workspace
+            </h2>
+            <p className="text-gray-100 leading-relaxed opacity-90">
+              Set up your team's hub for AI-powered proposals and collaboration
+            </p>
+          </div>
         </div>
 
-        {/* Body */}
-        <form onSubmit={handleSubmit} className="p-6">
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="px-8 pb-8">
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg mb-4">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span className="text-sm">{error}</span>
+            <div 
+              className="flex items-start gap-3 p-4 mb-6 rounded-2xl border border-white/20"
+              style={{ 
+                background: 'rgba(239, 68, 68, 0.1)',
+                backdropFilter: 'blur(10px)'
+              }}
+            >
+              <AlertCircle className="w-5 h-5 text-red-300 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-white">{error}</p>
+              </div>
             </div>
           )}
 
-          <div className="mb-6">
-            <label htmlFor="workspace-name" className="block text-sm font-medium text-gray-700 mb-2">
-              Workspace name
+          <div className="mb-8">
+            <label htmlFor="workspace-name" className="block text-sm font-semibold text-white mb-4">
+              Workspace Name
             </label>
-            <input
-              id="workspace-name"
-              ref={inputRef}
-              type="text"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                if (error) setError('');
-              }}
-              placeholder="My Company Workspace"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
-              required
-              disabled={isSubmitting}
-              maxLength={100}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Choose a name that identifies your team or organization
+            <div className="relative">
+              <input
+                ref={inputRef}
+                id="workspace-name"
+                type="text"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (error) setError('');
+                }}
+                placeholder="My Company"
+                className="w-full px-4 py-4 text-lg font-medium text-white placeholder-gray-300 rounded-2xl focus:scale-[1.02] transition-all duration-300 outline-none border border-white/20"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  backdropFilter: 'blur(10px)',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                }}
+                required
+                disabled={isSubmitting}
+                maxLength={50}
+              />
+              <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                <Building2 className="w-5 h-5 text-gray-300" />
+              </div>
+            </div>
+            <p className="text-sm text-gray-200 mt-3 leading-relaxed opacity-80">
+              Choose a name that represents your team or organization
             </p>
           </div>
 
-          <div className="flex justify-end space-x-3">
-            <Button
+          <div className="flex gap-3">
+            <button
               type="button"
-              variant="ghost"
               onClick={handleClose}
               disabled={isSubmitting}
+              className="flex-1 py-3 px-6 rounded-2xl font-semibold border border-white/20 hover:scale-105 transition-all duration-300 disabled:opacity-50"
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(10px)',
+                color: 'white'
+              }}
             >
               Cancel
-            </Button>
-            <Button
+            </button>
+            <button
               type="submit"
-              variant="primary"
-              loading={isSubmitting || contextLoading}
               disabled={isSubmitting || contextLoading || !name.trim()}
+              className="flex-1 py-3 px-6 rounded-2xl font-semibold border border-white/20 hover:scale-105 transition-all duration-300 group disabled:opacity-50 disabled:hover:scale-100"
+              style={{
+                background: 'rgba(99, 102, 241, 0.8)',
+                backdropFilter: 'blur(10px)',
+                boxShadow: '0 8px 32px rgba(99, 102, 241, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                color: 'white'
+              }}
             >
-              Create workspace
-            </Button>
+              {isSubmitting || contextLoading ? (
+                'Creating...'
+              ) : (
+                <>
+                  Create Workspace
+                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
+            </button>
           </div>
         </form>
       </div>
+
+      <style jsx>{`
+        @keyframes modalSlideIn {
+          from {
+            opacity: 0;
+            transform: scale(0.95) translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
+
+        @keyframes float {
+          0%, 100% {
+            transform: translateY(0px) rotate(0deg);
+          }
+          50% {
+            transform: translateY(-20px) rotate(5deg);
+          }
+        }
+      `}</style>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

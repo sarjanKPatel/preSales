@@ -8,6 +8,7 @@ interface Profile {
   id: string;
   email: string;
   full_name: string | null;
+  waitlist_status?: 'pending' | 'approved';
   created_at: string;
   updated_at: string;
 }
@@ -35,32 +36,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchProfile = async (user: User) => {
     if (!user) return;
     
+    // Set a fallback profile immediately to prevent hanging
+    const fallbackProfile = {
+      id: user.id,
+      email: user.email || '',
+      full_name: user.user_metadata?.full_name || null,
+      waitlist_status: 'pending' as const, // Default for new users without profile
+      created_at: user.created_at,
+      updated_at: user.updated_at || user.created_at
+    };
+    
     try {
-      // First try to get profile from database
+      console.log('[AuthContext] Fetching profile for user:', user.id);
       const { data: profileData, error } = await db.getMyProfile();
       
       if (profileData && !error) {
+        console.log('[AuthContext] Profile fetched successfully:', profileData);
         setProfile(profileData);
       } else {
-        // Fallback to user metadata if no profile exists yet
-        setProfile({
-          id: user.id,
-          email: user.email || '',
-          full_name: user.user_metadata?.full_name || null,
-          created_at: user.created_at,
-          updated_at: user.updated_at || user.created_at
-        });
+        console.log('[AuthContext] No profile found, using fallback');
+        setProfile(fallbackProfile);
       }
     } catch (error) {
-      console.error('Error fetching profile:', error);
-      // Fallback to user metadata on error
-      setProfile({
-        id: user.id,
-        email: user.email || '',
-        full_name: user.user_metadata?.full_name || null,
-        created_at: user.created_at,
-        updated_at: user.updated_at || user.created_at
-      });
+      console.error('[AuthContext] Error fetching profile:', error);
+      // Always fallback to user metadata on error
+      setProfile(fallbackProfile);
     }
   };
 
@@ -73,35 +73,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    let mounted = true;
+    let isMounted = true; // Renamed to avoid shadowing state variable
 
     // Get initial session
     const getInitialSession = async () => {
+      console.log('[AuthContext] Getting initial session...');
       try {
         const { data: { session }, error } = await auth.getSession();
         
-        if (!mounted) return;
+        if (!isMounted) return;
         
         if (error) {
-          console.error('Error getting initial session:', error);
+          console.error('[AuthContext] Error getting initial session:', error);
           setSession(null);
           setUser(null);
           setProfile(null);
         } else if (session) {
+          console.log('[AuthContext] Session found, user:', session.user.id);
           setSession(session);
           setUser(session.user);
           
-          // Get profile data
-          await fetchProfile(session.user);
+          // Get profile data (non-blocking to prevent hanging)
+          fetchProfile(session.user).catch(err => {
+            console.error('[AuthContext] Profile fetch failed:', err);
+          });
         } else {
+          console.log('[AuthContext] No session found');
           setSession(null);
           setUser(null);
           setProfile(null);
         }
       } catch (error) {
-        console.error('Error getting initial session:', error);
+        console.error('[AuthContext] Error getting initial session:', error);
+        // Ensure we still set loading to false on error
+        setSession(null);
+        setUser(null);
+        setProfile(null);
       } finally {
-        if (mounted) {
+        if (isMounted) {
+          console.log('[AuthContext] Setting loading to false');
           setLoading(false);
         }
       }
@@ -111,7 +121,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Listen for auth changes
     const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return;
+      console.log('[AuthContext] Auth state changed:', event, 'session:', !!session);
+      if (!isMounted) return;
       
       setSession(session);
       
@@ -129,7 +140,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
         
-        await fetchProfile(session.user);
+        // Fetch profile in background (non-blocking)
+        fetchProfile(session.user).catch(err => {
+          console.error('[AuthContext] Profile fetch failed in auth state change:', err);
+        });
       } else {
         setUser(null);
         setProfile(null);
@@ -139,7 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
-      mounted = false;
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, []);

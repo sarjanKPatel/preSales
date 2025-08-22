@@ -4,9 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
 import Button from '@/components/Button';
-import WorkspaceGate from '@/components/workspaces/WorkspaceGate';
 import { useAuth } from '@/contexts/AuthContext';
-import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { 
   Brain, 
   Zap, 
@@ -21,84 +19,26 @@ import {
 
 export default function HomePage() {
   const router = useRouter();
-  const { user } = useAuth();
-  const { currentWorkspace } = useWorkspace();
+  const { user, profile, loading } = useAuth();
 
   const handleGetStarted = () => {
-    router.push('/signup');
+    if (user) {
+      // If user is logged in but on waitlist, go to waitlist page
+      if (profile?.waitlist_status === 'pending') {
+        router.push('/waitlist');
+      } else {
+        // If approved, go to workspace dashboard
+        router.push('/vision');
+      }
+    } else {
+      // If not logged in, go to signup
+      router.push('/signup');
+    }
   };
 
-  // If user is authenticated, show workspace dashboard
-  if (user) {
-    return (
-      <WorkspaceGate>
-        <Layout>
-          <div className="py-8">
-            <div className="text-center">
-              <h1 className="text-3xl font-bold text-gray-900 mb-4">
-                Welcome to {currentWorkspace?.name}
-              </h1>
-              <p className="text-gray-600 mb-8">
-                You're now in your workspace. Start building amazing proposals with AI.
-              </p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-                <div className="bg-white p-6 rounded-lg border border-gray-200 hover:shadow-lg transition-shadow">
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <Brain className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Company Vision</h3>
-                  <p className="text-gray-600 mb-4">Define your company's vision and values</p>
-                  <Button 
-                    variant="primary" 
-                    size="sm" 
-                    onClick={() => router.push('/vision')}
-                    className="w-full"
-                  >
-                    Get Started
-                  </Button>
-                </div>
+  // Always show marketing page regardless of authentication status
 
-                <div className="bg-white p-6 rounded-lg border border-gray-200 hover:shadow-lg transition-shadow">
-                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <Users className="w-6 h-6 text-green-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Lead Information</h3>
-                  <p className="text-gray-600 mb-4">Manage your sales leads and opportunities</p>
-                  <Button 
-                    variant="primary" 
-                    size="sm" 
-                    onClick={() => router.push('/leads')}
-                    className="w-full"
-                  >
-                    View Leads
-                  </Button>
-                </div>
-
-                <div className="bg-white p-6 rounded-lg border border-gray-200 hover:shadow-lg transition-shadow">
-                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <FileText className="w-6 h-6 text-purple-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Proposals</h3>
-                  <p className="text-gray-600 mb-4">Create and manage your proposals</p>
-                  <Button 
-                    variant="primary" 
-                    size="sm" 
-                    onClick={() => router.push('/proposals')}
-                    className="w-full"
-                  >
-                    View Proposals
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Layout>
-      </WorkspaceGate>
-    );
-  }
-
-  // If user is not authenticated, show marketing page
+  // Show landing page for unauthenticated users or those on waitlist
 
   const features = [
     {
