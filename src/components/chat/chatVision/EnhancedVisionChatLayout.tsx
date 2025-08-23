@@ -3,7 +3,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import ChatSidebar, { ChatSession } from '../shared/ChatSidebar';
 import ChatWindow from '../shared/ChatWindow';
-import VisionPreview, { DraftVision } from './VisionPreview';
 import ResizableSplitter from '../shared/ResizableSplitter';
 import { MessageProps } from '../shared/Message';
 import { cn } from '@/lib/utils';
@@ -12,35 +11,37 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { db } from '@/lib/supabase';
 
-interface VisionChatLayoutProps {
-  className?: string;                                 // Additional CSS classes
-  onSaveVision?: (vision: DraftVision) => void;      // Callback when vision is saved
-  entityId?: string;                                  // Related entity ID
-  entityName?: string;                                // Related entity name
-  visionId?: string;                                  // Vision ID for loading existing vision
+interface EnhancedVisionChatLayoutProps {
+  className?: string;
+  entityId?: string;
+  entityName?: string;
+  visionId?: string;
 }
 
-export default function VisionChatLayout({
+export default function EnhancedVisionChatLayout({
   className,
-  onSaveVision,
   entityId,
   entityName,
   visionId
-}: VisionChatLayoutProps) {
+}: EnhancedVisionChatLayoutProps) {
   const { user } = useAuth();
   const { currentWorkspace } = useWorkspace();
+  
+  // Panel states
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  
+  // Chat states
   const [activeSessionId, setActiveSessionId] = useState<string | undefined>();
   const [messages, setMessages] = useState<MessageProps[]>([]);
-  const [draftVision, setDraftVision] = useState<DraftVision>({});
-  const [isSaving, setIsSaving] = useState(false);
-  const [chatWidth, setChatWidth] = useState(66);
   const [sessions, setSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // Panel sizing
+  const [chatWidth, setChatWidth] = useState(66);
 
   // Message handler for the agent response hook
   const handleNewMessage = useCallback((message: any) => {
-    console.log('[VisionChatLayout] handleNewMessage called:', {
+    console.log('[EnhancedVisionChatLayout] handleNewMessage called:', {
       messageId: message.id,
       role: message.role,
       content: message.content?.substring(0, 50) + '...',
@@ -48,12 +49,12 @@ export default function VisionChatLayout({
     });
 
     setMessages(prev => {
-      console.log('[VisionChatLayout] Current messages count:', prev.length);
+      console.log('[EnhancedVisionChatLayout] Current messages count:', prev.length);
       
       // Prevent duplicate messages
       const messageExists = prev.some(m => m.id === message.id);
       if (messageExists) {
-        console.log('[VisionChatLayout] Message already exists, skipping:', message.id);
+        console.log('[EnhancedVisionChatLayout] Message already exists, skipping:', message.id);
         return prev;
       }
       
@@ -65,7 +66,7 @@ export default function VisionChatLayout({
       };
       
       const newMessages = [...prev, newMessage];
-      console.log('[VisionChatLayout] Adding new message, total count:', newMessages.length);
+      console.log('[EnhancedVisionChatLayout] Adding new message, total count:', newMessages.length);
       return newMessages;
     });
   }, []);
@@ -76,15 +77,6 @@ export default function VisionChatLayout({
     onMessage: handleNewMessage,
   });
 
-  // Debug: Log when sendMessage function changes
-  useEffect(() => {
-    console.log('[VisionChatLayout] sendMessage function changed:', {
-      hasSendMessage: !!sendMessage,
-      activeSessionId,
-      timestamp: new Date().toISOString()
-    });
-  }, [sendMessage, activeSessionId]);
-  
   // Load sessions when component mounts or visionId changes
   const loadSessions = useCallback(async () => {
     if (!currentWorkspace) return;
@@ -193,8 +185,6 @@ export default function VisionChatLayout({
     }
   }, [activeSessionId, sessions]);
 
- 
-
   // Get active session object
   const activeSession = sessions.find(s => s.id === activeSessionId) || null;
 
@@ -206,7 +196,6 @@ export default function VisionChatLayout({
     if (newSession) {
       setActiveSessionId(newSession.id);
       setMessages([]);
-      setDraftVision({});
     }
   };
 
@@ -215,7 +204,6 @@ export default function VisionChatLayout({
   };
 
   const handleRenameSession = async (sessionId: string) => {
-    // Direct rename without prompt - you can implement inline editing UI if needed
     const currentSession = sessions.find(s => s.id === sessionId);
     if (currentSession) {
       const timestamp = new Date().toLocaleString();
@@ -228,32 +216,29 @@ export default function VisionChatLayout({
   };
 
   const handleSendMessage = useCallback(async (content: string) => {
-    console.log('[VisionChatLayout] handleSendMessage called:', {
+    console.log('[EnhancedVisionChatLayout] handleSendMessage called:', {
       content,
       activeSessionId,
-      hasSendMessage: !!sendMessage,
-      sendMessageFunctionId: sendMessage.toString().substring(0, 50) + '...'
+      hasSendMessage: !!sendMessage
     });
 
     let sessionIdToUse = activeSessionId;
 
     // Auto-create session if none exists
     if (!activeSessionId) {
-      console.log('[VisionChatLayout] No active session, auto-creating new session...');
+      console.log('[EnhancedVisionChatLayout] No active session, auto-creating new session...');
       try {
         const newSession = await createSession();
         if (!newSession) {
-          console.error('[VisionChatLayout] Failed to create new session');
+          console.error('[EnhancedVisionChatLayout] Failed to create new session');
           return;
         }
-        console.log('[VisionChatLayout] New session created:', newSession.id);
+        console.log('[EnhancedVisionChatLayout] New session created:', newSession.id);
         sessionIdToUse = newSession.id;
         
-        // Since state update is async, we need to manually handle the first message
         // Create user message in database
-        console.log('[VisionChatLayout] Creating user message for new session...');
         if (!sessionIdToUse) {
-          console.error('[VisionChatLayout] No session ID available');
+          console.error('[EnhancedVisionChatLayout] No session ID available');
           return;
         }
         const userMessage = await db.createChatMessage(sessionIdToUse, 'user', content);
@@ -268,7 +253,6 @@ export default function VisionChatLayout({
         handleNewMessage(userMessageObj);
         
         // Call API for AI response
-        console.log('[VisionChatLayout] Sending API request for new session...');
         const response = await fetch('/api/agent', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -286,7 +270,7 @@ export default function VisionChatLayout({
           
           // Create assistant message
           if (!sessionIdToUse) {
-            console.error('[VisionChatLayout] No session ID available for assistant message');
+            console.error('[EnhancedVisionChatLayout] No session ID available for assistant message');
             return;
           }
           const assistantMessage = await db.createChatMessage(sessionIdToUse, 'assistant', agentResponse);
@@ -301,33 +285,23 @@ export default function VisionChatLayout({
           handleNewMessage(assistantMessageObj);
         }
         
-        console.log('[VisionChatLayout] Message sent to new session successfully');
         return;
       } catch (error) {
-        console.error('[VisionChatLayout] Failed to create session or send message:', error);
+        console.error('[EnhancedVisionChatLayout] Failed to create session or send message:', error);
         return;
       }
     }
     
     try {
-      console.log('[VisionChatLayout] Calling sendMessage with existing session:', sessionIdToUse);
+      console.log('[EnhancedVisionChatLayout] Calling sendMessage with existing session:', sessionIdToUse);
       await sendMessage(content);
-      console.log('[VisionChatLayout] sendMessage completed successfully');
+      console.log('[EnhancedVisionChatLayout] sendMessage completed successfully');
     } catch (error) {
-      console.error('[VisionChatLayout] Failed to send message:', error);
+      console.error('[EnhancedVisionChatLayout] Failed to send message:', error);
     }
   }, [activeSessionId, sendMessage, createSession, handleNewMessage, currentWorkspace, user, visionId]);
 
-  // Debug: Log when handleSendMessage function is recreated
-  useEffect(() => {
-    console.log('[VisionChatLayout] handleSendMessage function recreated:', {
-      activeSessionId,
-      hasSendMessage: !!sendMessage,
-      timestamp: new Date().toISOString()
-    });
-  }, [handleSendMessage]);
-
-  const handleRegenerateMessage = (messageId: string) => { // Regenerate AI response for specific message
+  const handleRegenerateMessage = (messageId: string) => {
     const messageIndex = messages.findIndex(m => m.id === messageId);
     if (messageIndex > 0) {
       const previousUserMessage = messages[messageIndex - 1];
@@ -335,13 +309,6 @@ export default function VisionChatLayout({
     }
   };
 
-  const handleSaveVision = async (vision: DraftVision) => { // Save vision draft to database
-    setIsSaving(true);
-    // Simulate save
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    onSaveVision?.(vision);
-    setIsSaving(false);
-  };
 
   return (
     <div className={cn("flex h-full relative", className)}>
@@ -360,29 +327,13 @@ export default function VisionChatLayout({
 
       {/* Main Content Area */}
       <div className="flex-1 h-full">
-        <ResizableSplitter
-            leftPanel={
-              <ChatWindow
-                messages={messages}
-                onSendMessage={handleSendMessage}       // Send message handler
-                onRegenerateMessage={handleRegenerateMessage} // Regenerate message handler
-                isLoading={isGenerating}               // AI generation loading state
-                className="h-full"
-              />
-            }
-            rightPanel={
-              <VisionPreview
-                draftVision={draftVision}               // AI-generated vision content
-                onSave={handleSaveVision}              // Save vision handler
-                isSaving={isSaving}                    // Save loading state
-              />
-            }
-            defaultLeftWidth={chatWidth}               // Default chat panel width
-            minLeftWidth={30}                          // Minimum chat panel width
-            maxLeftWidth={80}                          // Maximum chat panel width
-            onResize={setChatWidth}                    // Handle resize events
-            className="h-full"
-          />
+        <ChatWindow
+          messages={messages}
+          onSendMessage={handleSendMessage}
+          onRegenerateMessage={handleRegenerateMessage}
+          isLoading={isGenerating}
+          className="h-full"
+        />
       </div>
     </div>
   );

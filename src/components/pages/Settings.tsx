@@ -6,11 +6,10 @@ import WorkspaceGate from '@/components/workspaces/WorkspaceGate';
 import WaitlistGate from '@/components/auth/WaitlistGate';
 import Layout from '@/components/layout/Layout';
 import SettingsProfile from '@/components/settings/SettingsProfile';
-import SettingsInvites from '@/components/settings/SettingsInvites';
 import SettingsWorkspace from '@/components/settings/SettingsWorkspace';
-import { User, UserPlus, Settings } from 'lucide-react';
+import { User, Settings } from 'lucide-react';
 
-type SettingsTab = 'profile' | 'invites' | 'workspace';
+type SettingsTab = 'profile' | 'workspace';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
@@ -21,12 +20,6 @@ export default function SettingsPage() {
       name: 'Profile',
       icon: User,
       description: 'Manage your personal information'
-    },
-    {
-      id: 'invites' as SettingsTab,
-      name: 'Team & Invites',
-      icon: UserPlus,
-      description: 'Invite team members and manage workspace access'
     },
     {
       id: 'workspace' as SettingsTab,
@@ -79,7 +72,6 @@ export default function SettingsPage() {
               <div className="flex-1">
                 <div className="max-w-4xl mx-auto py-8 px-6">
                   {activeTab === 'profile' && <SettingsProfile />}
-                  {activeTab === 'invites' && <SettingsInvites />}
                   {activeTab === 'workspace' && <SettingsWorkspace />}
                 </div>
               </div>
