@@ -1,11 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
-import WorkspaceEmptyState from '@/components/workspaces/WorkspaceEmptyState';
-import WorkspaceCreateModal from '@/components/workspaces/WorkspaceCreateModal';
-import WorkspaceSelector from '@/components/workspaces/WorkspaceSelector';
 
 interface WorkspaceGateProps {
   children: React.ReactNode;
@@ -13,32 +11,53 @@ interface WorkspaceGateProps {
 }
 
 export default function WorkspaceGate({ children, fallback }: WorkspaceGateProps) {
+  const router = useRouter();
+  const pathname = usePathname();
   const { user, loading: authLoading } = useAuth();
-  const { currentWorkspace, workspaces, loading: workspaceLoading } = useWorkspace();
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const { currentWorkspace, workspaces, loading: workspaceLoading, setCurrentWorkspace } = useWorkspace();
 
-  // DEBUG: Log workspace gate state
-  console.log('[WorkspaceGate] State check:', {
-    user: !!user,
-    authLoading,
-    workspaceLoading,
-    currentWorkspace: currentWorkspace?.id,
-    workspacesCount: workspaces.length
-  });
+  // Don't apply workspace gate logic to workspace setup/welcome pages
+  const isWorkspaceSetupPage = pathname === '/workspace-setup' || pathname === '/workspace-welcome';
+
+  useEffect(() => {
+    if (authLoading || workspaceLoading || isWorkspaceSetupPage) return;
+
+    if (!user) {
+      return; // ProtectedRoute will handle this
+    }
+
+    // If user has no workspaces, redirect to workspace setup
+    if (workspaces.length === 0) {
+      router.push('/workspace-setup');
+      return;
+    }
+
+    // If user has workspaces but no current workspace selected, select the first one
+    if (!currentWorkspace && workspaces.length > 0) {
+      setCurrentWorkspace(workspaces[0]);
+      // Redirect to workspace home page
+      router.push('/workspace');
+      return;
+    }
+  }, [user, currentWorkspace, workspaces, authLoading, workspaceLoading, router, isWorkspaceSetupPage, setCurrentWorkspace]);
 
   // Show loading while checking auth or workspace state
   if (authLoading || workspaceLoading) {
-    console.log('[WorkspaceGate] Showing loading state - authLoading:', authLoading, 'workspaceLoading:', workspaceLoading);
     return (
       fallback || (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="text-gray-600 mt-4">Loading...</p>
+            <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading...</p>
           </div>
         </div>
       )
     );
+  }
+
+  // Don't gate workspace setup/welcome pages
+  if (isWorkspaceSetupPage) {
+    return <>{children}</>;
   }
 
   // If not authenticated, this should be handled by ProtectedRoute
@@ -46,28 +65,13 @@ export default function WorkspaceGate({ children, fallback }: WorkspaceGateProps
     return null;
   }
 
-  // If user has no workspaces, show create workspace flow
-  if (workspaces.length === 0) {
+  // If workspace checks are in progress, show loading
+  if (workspaces.length === 0 || !currentWorkspace) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-2xl">
-          <WorkspaceEmptyState onCreateWorkspace={() => setShowCreateModal(true)} />
-          <WorkspaceCreateModal
-            isOpen={showCreateModal}
-            onClose={() => setShowCreateModal(false)}
-            onSuccess={() => setShowCreateModal(false)}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // If user has workspaces but no current workspace selected, show workspace selector
-  if (!currentWorkspace) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <WorkspaceSelector />
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">Setting up workspace...</p>
         </div>
       </div>
     );

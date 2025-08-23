@@ -33,8 +33,9 @@ interface WorkspaceContextType {
   workspaceLoading: boolean;
   error: string | null;
   setCurrentWorkspace: (workspace: Workspace) => void;
+  setCurrentWorkspaceById: (workspaceId: string) => void;
   refreshWorkspaces: () => Promise<void>;
-  createWorkspace: (name: string) => Promise<{ workspace?: Workspace; error?: any }>;
+  createWorkspace: (name: string) => Promise<{ success: boolean; workspace?: Workspace; error?: any }>;
   deleteWorkspace: (workspaceId: string) => Promise<{ success?: boolean; error?: any }>;
   leaveWorkspace: (workspaceId: string) => Promise<{ success?: boolean; error?: any }>;
   getWorkspaceMembers: (workspaceId: string) => Promise<{ members?: WorkspaceMember[]; error?: any }>;
@@ -131,20 +132,21 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       
       if (error) {
         setError(typeof error === 'string' ? error : error.message || 'Unknown error');
-        return { error };
+        return { success: false, error };
       } else if (data) {
         // Add the new workspace to the current list immediately
         setWorkspaces(prev => [...prev, data]);
-        setCurrentWorkspace(data);
+        // DON'T set current workspace immediately - let the redirect happen first
+        // setCurrentWorkspace(data);
         setCurrentUserRole('admin'); // Creator is always admin
-        return { workspace: data };
+        return { success: true, workspace: data };
       }
       
-      return { error: 'Unknown error' };
+      return { success: false, error: 'Unknown error' };
     } catch (err: any) {
       setError('Failed to create workspace');
       console.error('Error creating workspace:', err);
-      return { error: err };
+      return { success: false, error: err };
     } finally {
       setLoading(false);
     }
@@ -318,6 +320,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
   }, [authLoading, loading, user, currentWorkspace, currentUserRole, workspaces.length]);
 
+  const setCurrentWorkspaceById = (workspaceId: string) => {
+    const workspace = workspaces.find(w => w.id === workspaceId);
+    if (workspace) {
+      setCurrentWorkspace(workspace);
+    }
+  };
+
   const value: WorkspaceContextType = {
     currentWorkspace,
     workspaces,
@@ -326,6 +335,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     workspaceLoading: loading,
     error,
     setCurrentWorkspace,
+    setCurrentWorkspaceById,
     refreshWorkspaces,
     createWorkspace,
     deleteWorkspace,

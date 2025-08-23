@@ -1,22 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
+import { useRouter } from 'next/navigation';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import Button from '@/components/Button';
-import WorkspaceCreateModal from '@/components/workspaces/WorkspaceCreateModal';
 import { Building2, Plus, ArrowRight } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function WorkspaceSelector() {
+  const router = useRouter();
   const { workspaces, setCurrentWorkspace } = useWorkspace();
-  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const handleWorkspaceSelect = (workspace: any) => {
     setCurrentWorkspace(workspace);
   };
 
   const handleCreateWorkspace = () => {
-    setShowCreateModal(true);
+    router.push('/workspace-setup');
   };
 
   return (
@@ -65,11 +65,6 @@ export default function WorkspaceSelector() {
         </Button>
       </div>
 
-      <WorkspaceCreateModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSuccess={() => setShowCreateModal(false)}
-      />
     </div>
   );
 }

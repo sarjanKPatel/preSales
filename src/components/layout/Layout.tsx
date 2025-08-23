@@ -32,7 +32,9 @@ export default function Layout({
     <div className={cn(
       'w-full',
       maxWidth !== 'full' ? `mx-auto ${maxWidthClasses[maxWidth]}` : 'w-full',
-      padding && 'px-4 sm:px-6 lg:px-8 py-6',
+      padding && 'px-4 sm:px-6 lg:px-8 pb-6',
+      // Add top padding to account for floating header (header is at top-4 with ~64px height)
+      padding && 'pt-20',
       className
     )}>
       {children}

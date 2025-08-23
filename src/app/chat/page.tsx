@@ -7,9 +7,7 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import WaitlistGate from '@/components/auth/WaitlistGate';
 import WorkspaceGate from '@/components/workspaces/WorkspaceGate';
 import { VisionChatLayout } from '@/components/chat';
-import { DraftVision } from '@/components/chat';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'react-hot-toast';
 
 // Remove mock sessions - ChatLayout now fetches its own data from the database
 
@@ -52,10 +50,6 @@ function ChatPageContent() {
     }
   }, [searchParams]);
 
-  const handleSaveVision = async (vision: DraftVision) => {
-    console.log('Vision saved:', vision);
-    toast.success('Vision saved successfully!');
-  };
 
   if (!agentInitialized) {
     return (
@@ -75,7 +69,6 @@ function ChatPageContent() {
           <Layout maxWidth="full" padding={false}>
             <div className="h-[calc(100vh-4rem)] w-full">
               <VisionChatLayout
-                onSaveVision={handleSaveVision}
                 className="h-full"
                 visionId={visionId}
               />

@@ -4,10 +4,10 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
 import Button from '@/components/Button';
+import ScrollReveal from '@/components/ScrollReveal';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   Brain, 
-  Zap, 
   FileText, 
   Users, 
   TrendingUp, 
@@ -43,255 +43,384 @@ export default function HomePage() {
   const features = [
     {
       icon: Brain,
-      title: 'AI-Powered Analysis',
-      description: 'Intelligent stakeholder mapping, challenge identification, and solution recommendations.',
-      color: 'bg-primary-50 text-primary-600',
+      title: 'Intelligent Discovery',
+      description: 'Automatically analyze client needs, map stakeholder relationships, and identify key decision factors to build winning strategies.',
+      color: 'from-gray-600 to-gray-700',
+      bgColor: 'from-gray-50 to-gray-100',
+      delay: '0.1s'
     },
     {
       icon: MessageSquare,
-      title: 'Interactive Chat',
-      description: 'Collaborate with AI to refine proposals, brainstorm solutions, and get strategic insights.',
-      color: 'bg-blue-50 text-blue-600',
+      title: 'Smart Collaboration',
+      description: 'Work seamlessly with your team using AI-powered suggestions, real-time editing, and intelligent content recommendations.',
+      color: 'from-gray-600 to-gray-700',
+      bgColor: 'from-gray-50 to-gray-100',
+      delay: '0.2s'
     },
     {
       icon: FileText,
-      title: 'Dynamic Sections',
-      description: 'Flexible proposal structure that adapts to your needs with AI-generated content.',
-      color: 'bg-green-50 text-green-600',
+      title: 'Dynamic Templates',
+      description: 'Industry-specific templates that automatically adapt content, structure, and messaging based on your client and opportunity.',
+      color: 'from-gray-600 to-gray-700',
+      bgColor: 'from-gray-50 to-gray-100',
+      delay: '0.3s'
     },
     {
       icon: TrendingUp,
-      title: 'ROI Tracking',
-      description: 'Built-in metrics and analytics to demonstrate value and track proposal success.',
-      color: 'bg-purple-50 text-purple-600',
+      title: 'Performance Insights',
+      description: 'Track proposal performance, measure engagement, and get actionable insights to improve your win rates over time.',
+      color: 'from-gray-600 to-gray-700',
+      bgColor: 'from-gray-50 to-gray-100',
+      delay: '0.4s'
     },
   ];
 
   const benefits = [
-    'Reduce proposal creation time by 70%',
-    'Increase win rates with AI insights',
-    'Standardize proposals across teams',
-    'Track engagement and ROI metrics',
-    'Collaborate with stakeholders in real-time',
-    'Export to PDF with professional formatting',
+    'Generate complete proposals in under 10 minutes',
+    'Identify decision-makers and their priorities automatically',
+    'Personalize content based on client industry and needs',
+    'Track proposal engagement with detailed analytics',
+    'Collaborate seamlessly with your entire sales team',
+    'Integrate with your existing CRM and sales tools',
   ];
 
   return (
-    <Layout padding={false}>
+    <Layout padding={false} maxWidth="full">
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-primary-50 via-white to-blue-50 px-6 py-20 lg:py-32">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <div className="flex items-center gap-2 mb-6">
-                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                  <Brain className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-primary-600 font-semibold">PropelIQ</span>
-              </div>
-              
-              <h1 className="text-4xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-                AI-Powered
-                <br />
-                <span className="text-primary">Pre-Sales</span>
-                <br />
-                Proposals
+      <section className="relative w-full px-4 sm:px-6 pt-24 sm:pt-32 md:pt-40 lg:pt-48 pb-20 sm:pb-32 lg:pb-40 overflow-hidden">
+        {/* Full-width dot pattern background */}
+        <div 
+          className="absolute inset-0 w-full h-full dot-grid-bg"
+          style={{
+            width: '100vw',
+            left: '50%',
+            transform: 'translateX(-50%)'
+          }}
+        ></div>
+        
+        <div className="relative z-10 w-full max-w-none">
+          <div className="text-center">
+            
+            {/* Main Headline */}
+            <ScrollReveal direction="up">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black text-gray-600 mb-6 sm:mb-8 leading-tight tracking-tight font-sans">
+                Close deals faster with
+                <br className="hidden sm:block" />
+                <span className="sm:hidden"> </span>
+                <span className="text-gray-700">
+                  intelligent proposals
+                </span>
               </h1>
-              
-              <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-                Transform your sales process with intelligent proposal generation. 
-                Let AI help you identify stakeholders, map challenges, and craft 
-                compelling solutions that win deals.
+            </ScrollReveal>
+            
+            {/* Supporting Subtext */}
+            <ScrollReveal direction="up" delay={200}>
+              <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-500 mb-8 sm:mb-12 max-w-xs sm:max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto leading-relaxed font-sans px-4 sm:px-0">
+                Transform your sales process with AI-powered proposal generation. 
+                <span className="hidden sm:inline"> Identify key stakeholders, map their challenges, and create compelling solutions that win.</span>
               </p>
-              
-              <div className="flex flex-col sm:flex-row gap-4">
+            </ScrollReveal>
+            
+            {/* CTA Buttons */}
+            <ScrollReveal direction="up" delay={400}>
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mb-12 sm:mb-20 px-4 sm:px-0">
                 <Button
-                  onClick={handleGetStarted}
+                  onClick={() => router.push('/login')}
                   variant="primary"
                   size="lg"
-                  className="text-lg px-8 py-4"
+                  className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-10 py-3 sm:py-4 font-semibold bg-gray-600 hover:bg-gray-700 text-white border-0 font-sans"
                 >
-                  Get Started Free
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                  Get Started
                 </Button>
                 <Button
                   variant="outline"
                   size="lg"
-                  className="text-lg px-8 py-4"
-                  onClick={() => {
-                    document.getElementById('features')?.scrollIntoView({ 
-                      behavior: 'smooth' 
-                    });
-                  }}
+                  className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-10 py-3 sm:py-4 font-semibold border-2 border-blue-600 text-blue-600 hover:bg-blue-50 bg-transparent font-sans"
+                  onClick={() => router.push('/signup')}
                 >
-                  Learn More
+                  Sign Up
                 </Button>
               </div>
-            </div>
+            </ScrollReveal>
             
-            <div className="lg:pl-12">
-              <div className="relative">
-                <div className="bg-white rounded-2xl shadow-2xl p-6 border border-gray-100">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                      <MessageSquare className="w-4 h-4 text-primary-600" />
-                    </div>
-                    <span className="font-medium text-gray-900">AI Assistant</span>
-                    <div className="ml-auto flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      Active
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3 mb-4">
-                    <div className="bg-gray-50 rounded-lg p-3">
-                      <p className="text-sm text-gray-700">
-                        "Help me identify key stakeholders for our enterprise software proposal."
-                      </p>
-                    </div>
-                    <div className="bg-primary-50 rounded-lg p-3">
-                      <p className="text-sm text-gray-700">
-                        I've analyzed your proposal and identified 8 key stakeholders including the CTO, CFO, and IT Director. 
-                        Would you like me to map their influence levels and decision-making power?
-                      </p>
-                      <div className="flex items-center gap-1 mt-2 text-xs text-primary-600">
-                        <Sparkles className="w-3 h-3" />
-                        AI Generated
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-gray-100 rounded-lg px-3 py-2">
-                      <span className="text-sm text-gray-500">Ask me anything...</span>
-                    </div>
-                    <Button size="sm" variant="primary">
-                      <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-                
-                {/* Floating elements */}
-                <div className="absolute -top-4 -right-4 bg-success text-white rounded-full p-3 shadow-lg">
-                  <CheckCircle className="w-6 h-6" />
-                </div>
-                <div className="absolute -bottom-4 -left-4 bg-warning text-white rounded-full p-3 shadow-lg">
-                  <Zap className="w-6 h-6" />
-                </div>
-              </div>
-            </div>
+
+
+
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">
-              Everything you need to win deals
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Powered by advanced AI, PropelIQ streamlines your entire proposal process 
-              from initial discovery to final presentation.
-            </p>
+      <section id="features" className="py-32 px-6 bg-gradient-to-b from-white via-blue-50/30 to-white w-full">
+        <div className="w-full">
+          <div className="text-center mb-20 max-w-6xl mx-auto">
+            <ScrollReveal direction="up">
+              <h2 className="text-4xl lg:text-6xl font-bold text-gray-600 mb-8">
+                Everything you need to
+                <br />
+                <span className="text-gray-700">
+                  accelerate your sales
+                </span>
+              </h2>
+            </ScrollReveal>
+            <ScrollReveal direction="up" delay={200}>
+              <p className="text-xl text-gray-500 max-w-4xl mx-auto leading-relaxed">
+                From stakeholder analysis to final presentations, our AI platform streamlines 
+                every step of your proposal workflow with intelligent automation.
+              </p>
+            </ScrollReveal>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
             {features.map((feature, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg transition-shadow"
-              >
-                <div className={`w-12 h-12 rounded-lg ${feature.color} flex items-center justify-center mb-4`}>
-                  <feature.icon className="w-6 h-6" />
+              <ScrollReveal key={index} direction="up" delay={100 * (index + 1)}>
+                <div className="group bg-white/80 backdrop-blur-sm rounded-3xl p-8 border border-white/50 hover:shadow-2xl transition-all duration-500 hover:-translate-y-2">
+                  <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${feature.bgColor} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
+                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${feature.color} flex items-center justify-center`}>
+                      <feature.icon className="w-5 h-5 text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-600 mb-4 group-hover:text-gray-700 transition-colors duration-300">
+                    {feature.title}
+                  </h3>
+                  <p className="text-gray-500 leading-relaxed group-hover:text-gray-600 transition-colors duration-300">
+                    {feature.description}
+                  </p>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {feature.title}
-                </h3>
-                <p className="text-gray-600 text-sm leading-relaxed">
-                  {feature.description}
-                </p>
-              </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>
       </section>
 
       {/* Benefits Section */}
-      <section className="py-20 px-6 bg-gray-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      <section className="py-32 px-6 bg-gradient-to-br from-blue-50 via-sky-50 to-white relative overflow-hidden w-full">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-5 w-full">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-400 rounded-full filter blur-3xl"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-sky-400 rounded-full filter blur-3xl"></div>
+        </div>
+        
+        <div className="relative z-10 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div>
-              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">
-                Transform your sales process
-              </h2>
-              <p className="text-lg text-gray-600 mb-8">
-                Join leading sales teams who have revolutionized their proposal 
-                process with AI-powered insights and automation.
-              </p>
+              <ScrollReveal direction="left">
+                <h2 className="text-4xl lg:text-6xl font-bold text-gray-600 mb-8 leading-tight">
+                  Proven results that
+                  <br />
+                  <span className="text-gray-700">
+                    drive real growth
+                  </span>
+                </h2>
+              </ScrollReveal>
+              <ScrollReveal direction="left" delay={200}>
+                <p className="text-xl text-gray-500 mb-10 leading-relaxed">
+                  Join 1000+ sales professionals who have transformed their proposal success rates 
+                  with intelligent automation, data-driven insights, and streamlined workflows.
+                </p>
+              </ScrollReveal>
               
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {benefits.map((benefit, index) => (
-                  <div key={index} className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-success flex-shrink-0" />
-                    <span className="text-gray-700">{benefit}</span>
-                  </div>
+                  <ScrollReveal key={index} direction="left" delay={300 + (index * 100)}>
+                    <div className="flex items-center gap-4 group">
+                      <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-emerald-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                        <CheckCircle className="w-5 h-5 text-white" />
+                      </div>
+                      <span className="text-gray-600 font-medium group-hover:text-gray-700 transition-colors duration-300">{benefit}</span>
+                    </div>
+                  </ScrollReveal>
                 ))}
               </div>
             </div>
             
             <div className="lg:pl-12">
-              <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-primary mb-2">70%</div>
-                    <div className="text-sm text-gray-600">Time Saved</div>
+              <ScrollReveal direction="right" delay={200}>
+                <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl p-10 border border-white/50">
+                  <div className="text-center mb-8">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">Proven Results</h3>
+                    <p className="text-gray-600">Real metrics from our customers</p>
                   </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-success mb-2">45%</div>
-                    <div className="text-sm text-gray-600">Higher Win Rate</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-purple-600 mb-2">3x</div>
-                    <div className="text-sm text-gray-600">Faster Proposals</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-blue-600 mb-2">98%</div>
-                    <div className="text-sm text-gray-600">User Satisfaction</div>
+                  
+                  <div className="grid grid-cols-2 gap-8">
+                    <div className="text-center group">
+                      <div className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text text-transparent mb-3 group-hover:scale-110 transition-transform duration-300">70%</div>
+                      <div className="text-sm text-gray-600 font-medium">Time Saved</div>
+                      <div className="w-full h-2 bg-blue-100 rounded-full mt-2">
+                        <div className="h-full bg-gradient-to-r from-blue-500 to-sky-500 rounded-full" style={{width: '70%'}}></div>
+                      </div>
+                    </div>
+                    <div className="text-center group">
+                      <div className="text-5xl font-bold bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent mb-3 group-hover:scale-110 transition-transform duration-300">45%</div>
+                      <div className="text-sm text-gray-600 font-medium">Higher Win Rate</div>
+                      <div className="w-full h-2 bg-green-100 rounded-full mt-2">
+                        <div className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full" style={{width: '45%'}}></div>
+                      </div>
+                    </div>
+                    <div className="text-center group">
+                      <div className="text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-3 group-hover:scale-110 transition-transform duration-300">3x</div>
+                      <div className="text-sm text-gray-600 font-medium">Faster Proposals</div>
+                      <div className="w-full h-2 bg-purple-100 rounded-full mt-2">
+                        <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full" style={{width: '100%'}}></div>
+                      </div>
+                    </div>
+                    <div className="text-center group">
+                      <div className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-3 group-hover:scale-110 transition-transform duration-300">98%</div>
+                      <div className="text-sm text-gray-600 font-medium">Satisfaction Rate</div>
+                      <div className="w-full h-2 bg-blue-100 rounded-full mt-2">
+                        <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full" style={{width: '98%'}}></div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </ScrollReveal>
             </div>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-6 bg-gradient-to-r from-primary to-primary-600 text-white relative overflow-hidden">
-        {/* Background pattern */}
-        <div className="absolute inset-0 bg-black bg-opacity-10"></div>
-        <div className="relative z-10 max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl lg:text-5xl font-bold mb-6 text-white">
-            Ready to win more deals?
-          </h2>
-          <p className="text-xl lg:text-2xl text-white opacity-90 mb-10 max-w-2xl mx-auto leading-relaxed">
-            Start creating intelligent proposals today. No credit card required.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button
-              onClick={handleGetStarted}
-              variant="secondary"
-              size="lg"
-              className="text-lg px-10 py-4 bg-white text-primary hover:bg-gray-100 hover:scale-105 transform transition-all duration-200 shadow-lg font-bold"
-            >
-              Get Started Free
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-            <p className="text-sm text-white opacity-75 sm:ml-4">
-              Join 1000+ sales teams already using PropelIQ
+      <section className="py-16 sm:py-24 md:py-32 px-4 sm:px-6 bg-gradient-to-br from-gray-50 via-gray-100 to-white relative overflow-hidden w-full">
+        {/* Full-width dot pattern background matching hero */}
+        <div 
+          className="absolute inset-0 w-full h-full dot-grid-bg opacity-40"
+          style={{
+            width: '100vw',
+            left: '50%',
+            transform: 'translateX(-50%)'
+          }}
+        ></div>
+        
+        {/* Floating elements for visual interest */}
+        <div className="absolute inset-0 overflow-hidden w-full pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-gray-200 rounded-full opacity-30 animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-24 h-24 bg-gray-300 rounded-full opacity-20"></div>
+          <div className="absolute top-3/4 left-3/4 w-20 h-20 bg-gray-400 rounded-full opacity-25"></div>
+        </div>
+        
+        <div className="relative z-10 max-w-6xl mx-auto text-center px-4 sm:px-0">
+          <ScrollReveal direction="up">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-7xl font-bold mb-6 sm:mb-8 text-gray-700 leading-tight">
+              Ready to accelerate
+              <br className="hidden sm:block" />
+              <span className="sm:hidden"> </span>
+              <span className="text-gray-600">
+                your sales success?
+              </span>
+            </h2>
+          </ScrollReveal>
+          
+          <ScrollReveal direction="up" delay={200}>
+            <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-500 mb-10 sm:mb-16 max-w-xs sm:max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto leading-relaxed">
+              Transform your proposal process with AI-powered insights.
+              <span className="hidden sm:inline"> Join industry leaders who've already revolutionized their sales approach with intelligent automation.</span>
             </p>
+          </ScrollReveal>
+          
+          {/* Updated CTA Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
+            {/* Demo Card */}
+            <ScrollReveal direction="up" delay={300}>
+              <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-8 border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
+                <div className="w-16 h-16 bg-gray-600 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+                  <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none">
+                    <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-700 mb-4">Watch Demo</h3>
+                <p className="text-gray-500 mb-6 leading-relaxed">
+                  See PropelIQ in action. 15-minute personalized demo tailored to your industry.
+                </p>
+                <Button
+                  onClick={handleGetStarted}
+                  variant="primary"
+                  size="lg"
+                  className="w-full text-lg py-4 font-semibold"
+                >
+                  Book Demo
+                </Button>
+              </div>
+            </ScrollReveal>
+
+            {/* Trial Card - Featured */}
+            <ScrollReveal direction="up" delay={400}>
+              <div className="bg-gray-600 rounded-3xl p-8 border border-gray-500 shadow-2xl hover:shadow-3xl transition-all duration-300 transform scale-105">
+                <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mb-6 mx-auto">
+                  <svg className="w-8 h-8 text-gray-600" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2L14 8H10L12 2Z" fill="currentColor" opacity="0.9"/>
+                    <path d="M8 8L6 12L10 10L8 8Z" fill="currentColor" opacity="0.7"/>
+                    <path d="M16 8L18 12L14 10L16 8Z" fill="currentColor" opacity="0.7"/>
+                    <circle cx="12" cy="10" r="2" fill="currentColor"/>
+                    <path d="M6 14L12 16L18 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" opacity="0.8"/>
+                    <path d="M7 17L12 18.5L17 17" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" fill="none" opacity="0.6"/>
+                    <path d="M10 16L11 20L12 18L13 20L14 16" stroke="currentColor" strokeWidth="1" strokeLinecap="round" fill="none" opacity="0.5"/>
+                  </svg>
+                </div>
+                <div className="bg-white text-gray-600 px-3 py-1 rounded-full text-sm font-semibold mb-4 inline-block">
+                  MOST POPULAR
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-4">Start Free Trial</h3>
+                <p className="text-gray-200 mb-6 leading-relaxed">
+                  Full access for 14 days. No credit card required. Cancel anytime.
+                </p>
+                <Button
+                  onClick={handleGetStarted}
+                  variant="secondary"
+                  size="lg"
+                  className="w-full text-lg py-4 bg-white text-gray-600 hover:bg-gray-50 font-bold shadow-xl"
+                >
+                  Try Free Now
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+              </div>
+            </ScrollReveal>
+
+            {/* Contact Card */}
+            <ScrollReveal direction="up" delay={500}>
+              <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-8 border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
+                <div className="w-16 h-16 bg-gray-500 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+                  <MessageSquare className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-700 mb-4">Talk to Sales</h3>
+                <p className="text-gray-500 mb-6 leading-relaxed">
+                  Custom enterprise solutions. Volume pricing. Dedicated support.
+                </p>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full text-lg py-4 font-semibold border-2 border-gray-300 text-gray-600 hover:border-gray-400"
+                  onClick={() => {
+                    document.getElementById('features')?.scrollIntoView({ 
+                      behavior: 'smooth' 
+                    });
+                  }}
+                >
+                  Contact Sales
+                </Button>
+              </div>
+            </ScrollReveal>
           </div>
+          
+          {/* Enhanced Trust Indicators */}
+          <ScrollReveal direction="up" delay={600}>
+            <p className="text-sm text-gray-400 mb-6 font-medium tracking-wide uppercase">
+              Trusted by Sales Teams Worldwide
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-8 text-gray-500">
+              <div className="flex items-center gap-3 bg-white/70 backdrop-blur-sm rounded-full px-6 py-3 shadow-sm">
+                <CheckCircle className="w-5 h-5 text-green-500" />
+                <span className="font-medium">SOC 2 Compliant</span>
+              </div>
+              <div className="flex items-center gap-3 bg-white/70 backdrop-blur-sm rounded-full px-6 py-3 shadow-sm">
+                <Users className="w-5 h-5 text-gray-600" />
+                <span className="font-medium">2500+ Active Users</span>
+              </div>
+              <div className="flex items-center gap-3 bg-white/70 backdrop-blur-sm rounded-full px-6 py-3 shadow-sm">
+                <Sparkles className="w-5 h-5 text-yellow-500" />
+                <span className="font-medium">4.9/5 Customer Rating</span>
+              </div>
+            </div>
+          </ScrollReveal>
         </div>
       </section>
 

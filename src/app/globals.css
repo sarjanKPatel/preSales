@@ -73,6 +73,47 @@ body {
   box-shadow: var(--glass-shadow);
 }
 
+/* Enhanced floating glass effect with liquid morphism - Apple inspired */
+.glass-floating {
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.63) 0%,
+    rgba(255, 255, 255, 0.5) 30%,
+    rgba(255, 255, 255, 0.55) 60%,
+    rgba(255, 255, 255, 0.6) 100%
+  );
+  backdrop-filter: blur(32px) saturate(250%) brightness(115%) contrast(110%);
+  -webkit-backdrop-filter: blur(32px) saturate(250%) brightness(115%) contrast(110%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 
+    0 12px 50px rgba(0, 0, 0, 0.12),
+    0 4px 20px rgba(0, 0, 0, 0.06),
+    0 1px 0 rgba(255, 255, 255, 0.95) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.05) inset,
+    0 0 0 1px rgba(255, 255, 255, 0.3) inset;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transform: translateZ(0);
+  will-change: transform, box-shadow, background;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Remove shiny pseudo-element */
+
+.glass-floating:hover {
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.45) 0%,
+    rgba(255, 255, 255, 0.35) 30%,
+    rgba(255, 255, 255, 0.4) 60%,
+    rgba(255, 255, 255, 0.42) 100%
+  );
+  transition: background 0.3s ease;
+}
+
+/* Simplified floating effect - no continuous animation */
+.glass-floating-scroll {
+  /* Remove continuous animation */
+}
+
 .glass:hover {
   box-shadow: var(--glass-shadow-hover);
   transform: translateY(-2px);
@@ -145,13 +186,21 @@ input::placeholder {
 
 /* Ensure good contrast for links */
 a {
-  color: #6366f1;
+  color: #3B82F6;
   text-decoration: none;
 }
 
 a:hover {
-  color: #4f46e5;
-  text-decoration: underline;
+  color: #2563EB;
+  text-decoration: none;
+}
+
+/* Specifically prevent underlines in header */
+header a,
+header a:hover,
+header a:focus,
+header a:active {
+  text-decoration: none !important;
 }
 
 /* Ensure proper contrast for disabled elements */
@@ -171,35 +220,120 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* Enhanced button styles for better visibility */
+/* Enhanced button styles with blue theme */
 .bg-primary {
-  background-color: #6366f1 !important;
+  background-color: #3B82F6 !important;
 }
 
 .hover\:bg-primary-600:hover {
-  background-color: #4f46e5 !important;
+  background-color: #2563EB !important;
 }
 
 .active\:bg-primary-700:active {
-  background-color: #4338ca !important;
+  background-color: #1D4ED8 !important;
 }
 
 .border-primary {
-  border-color: #6366f1 !important;
+  border-color: #3B82F6 !important;
 }
 
 .text-primary {
-  color: #6366f1 !important;
+  color: #3B82F6 !important;
 }
 
 .from-primary {
-  --tw-gradient-from: #6366f1 var(--tw-gradient-from-position);
-  --tw-gradient-to: rgb(99 102 241 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-from: #3B82F6 var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(59 130 246 / 0) var(--tw-gradient-to-position);
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
 
 .to-primary-600 {
-  --tw-gradient-to: #4f46e5 var(--tw-gradient-to-position);
+  --tw-gradient-to: #2563EB var(--tw-gradient-to-position);
+}
+
+/* Animated Buttons with Lift Effect */
+.btn-animated {
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transform: translateY(0) scale(1);
+  box-shadow: 
+    0 4px 14px rgba(59, 130, 246, 0.15),
+    0 2px 6px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-animated::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.btn-animated:hover {
+  transform: none;
+  box-shadow: 
+    0 0 0 2px rgba(156, 163, 175, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.btn-animated:hover::before {
+  display: none;
+}
+
+.btn-animated:active {
+  transform: translateY(0px);
+  transition: all 0.1s ease;
+}
+
+/* Primary Button Variant */
+.btn-primary {
+  background: linear-gradient(135deg, #E5E7EB, #D1D5DB);
+  color: #374151;
+  border: none;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #F3F4F6, #E5E7EB);
+  border: 1px solid #D1D5DB;
+}
+
+/* Secondary Button Variant */
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.9);
+  color: #1E40AF;
+  border: 2px solid rgba(59, 130, 246, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 1);
+  border-color: #3B82F6;
+  color: #1D4ED8;
+}
+
+/* Outline Button Variant */
+.btn-outline {
+  background: transparent;
+  color: #4B5563;
+  border: 2px solid #9CA3AF;
+}
+
+.btn-outline:hover {
+  background: rgba(107, 114, 128, 0.05);
+  color: #374151;
+  border-color: #6B7280;
+  box-shadow: 
+    0 0 0 2px rgba(156, 163, 175, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .bg-gradient-to-r {
@@ -334,4 +468,127 @@ header {
 .glass-heavy {
   backface-visibility: hidden;
   transform: translateZ(0);
+}
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Scroll reveal animations */
+.scroll-reveal {
+  opacity: 0;
+  transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.scroll-reveal.visible {
+  opacity: 1;
+}
+
+/* Slide up from bottom */
+.scroll-reveal-up {
+  transform: translateY(60px);
+}
+
+.scroll-reveal-up.visible {
+  transform: translateY(0);
+}
+
+/* Slide down from top */
+.scroll-reveal-down {
+  transform: translateY(-60px);
+}
+
+.scroll-reveal-down.visible {
+  transform: translateY(0);
+}
+
+/* Slide in from left */
+.scroll-reveal-left {
+  transform: translateX(-60px);
+}
+
+.scroll-reveal-left.visible {
+  transform: translateX(0);
+}
+
+/* Slide in from right */
+.scroll-reveal-right {
+  transform: translateX(60px);
+}
+
+.scroll-reveal-right.visible {
+  transform: translateX(0);
+}
+
+/* Scale up */
+.scroll-reveal-scale {
+  transform: scale(0.8);
+}
+
+.scroll-reveal-scale.visible {
+  transform: scale(1);
+}
+
+/* Fade in */
+.scroll-reveal-fade {
+  /* Only opacity change, no transform */
+}
+
+/* Staggered animation delays */
+.scroll-stagger-1 { transition-delay: 0.1s; }
+.scroll-stagger-2 { transition-delay: 0.2s; }
+.scroll-stagger-3 { transition-delay: 0.3s; }
+.scroll-stagger-4 { transition-delay: 0.4s; }
+.scroll-stagger-5 { transition-delay: 0.5s; }
+.scroll-stagger-6 { transition-delay: 0.6s; }
+
+/* Enhanced gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #3B82F6, #1D4ED8, #0EA5E9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  background-size: 200% 200%;
+  animation: gradient-shift 4s ease-in-out infinite;
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Staggered animations */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }
+
+/* Enhanced shadow utilities */
+.shadow-blue {
+  box-shadow: 0 10px 25px rgba(59, 130, 246, 0.15);
+}
+
+.shadow-blue-lg {
+  box-shadow: 0 20px 40px rgba(59, 130, 246, 0.2);
+}
+
+/* Backdrop blur utilities */
+.backdrop-blur-strong {
+  backdrop-filter: blur(20px) saturate(180%) brightness(110%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(110%);
+}
+
+/* Dot grid pattern background */
+.dot-grid-bg {
+  background-image: 
+    linear-gradient(180deg, rgba(248, 250, 252, 0.9) 0%, rgba(248, 250, 252, 0.3) 30%, transparent 100%),
+    radial-gradient(ellipse 600px 400px at 100% 0%, rgba(59, 130, 246, 0.15) 0%, rgba(147, 197, 253, 0.1) 40%, rgba(255, 255, 255, 0.8) 80%, transparent 100%),
+    radial-gradient(ellipse 600px 400px at 0% 100%, rgba(59, 130, 246, 0.15) 0%, rgba(147, 197, 253, 0.1) 40%, rgba(255, 255, 255, 0.8) 80%, transparent 100%),
+    radial-gradient(circle 1.5px at center, rgba(156, 163, 175, 0.6) 1.5px, transparent 1.5px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 22px 22px;
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat;
+  background-position: 0 0, 0 0, 0 0, 0 0;
+  background-color: #f8fafc;
 }
