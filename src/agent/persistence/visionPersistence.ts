@@ -82,6 +82,15 @@ export class VisionPersistence {
       const { metadata, ...cleanVisionState } = visionState;
       
       // Step 5: Atomic update using RPC for transaction safety
+      console.log('[VisionPersistence] Calling update_vision_atomic RPC...', {
+        visionId,
+        cleanVisionStateKeys: Object.keys(cleanVisionState),
+        completenessScore,
+        workspaceId,
+        userId,
+        expectedVersion: currentVision.completeness_score || 0
+      });
+
       const { data: updateResult, error: updateError } = await supabase
         .rpc('update_vision_atomic', {
           p_vision_id: visionId,
@@ -92,7 +101,14 @@ export class VisionPersistence {
           p_expected_version: currentVision.completeness_score || 0
         });
 
+      console.log('[VisionPersistence] RPC response:', {
+        updateResult,
+        updateError: updateError?.message,
+        updateErrorDetails: updateError
+      });
+
       if (updateError) {
+        console.error('[VisionPersistence] ❌ RPC call failed:', updateError);
         return {
           success: false,
           visionId,

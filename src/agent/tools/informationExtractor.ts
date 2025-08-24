@@ -69,6 +69,13 @@ export class InformationExtractor implements Tool<InformationExtractorInput, Inf
 
       // Persist if config provided
       if (input.persistence_config && updatedVisionState) {
+        console.log('[InformationExtractor] Attempting database persistence...', {
+          visionId: input.persistence_config.vision_id,
+          workspaceId: input.persistence_config.workspace_id,
+          userId: input.persistence_config.user_id,
+          hasVisionState: !!updatedVisionState
+        });
+        
         try {
           const persistResult = await this.visionPersistence.updateVisionAtomic({
             visionId: input.persistence_config.vision_id,
@@ -77,14 +84,31 @@ export class InformationExtractor implements Tool<InformationExtractorInput, Inf
             userId: input.persistence_config.user_id,
           });
 
+          console.log('[InformationExtractor] Persistence attempt completed:', {
+            success: persistResult.success,
+            completenessScore: persistResult.completenessScore,
+            newVersion: persistResult.newVersion,
+            error: persistResult.error
+          });
+
           if (persistResult.success) {
-            console.log(`[InformationExtractor] Vision persisted - Completeness: ${persistResult.completenessScore}%`);
+            console.log(`[InformationExtractor] ✅ Vision persisted to database - Completeness: ${persistResult.completenessScore}%`);
           } else {
-            console.warn('[InformationExtractor] Failed to persist:', persistResult.error);
+            console.error('[InformationExtractor] ❌ Failed to persist to database:', persistResult.error);
+            // Log additional details for debugging
+            if (persistResult.conflictData) {
+              console.error('[InformationExtractor] Conflict details:', persistResult.conflictData);
+            }
           }
         } catch (error) {
-          console.warn('[InformationExtractor] Persistence error:', error);
+          console.error('[InformationExtractor] ❌ Persistence exception:', error);
+          console.error('[InformationExtractor] Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
         }
+      } else {
+        console.warn('[InformationExtractor] ⚠️ Skipping persistence:', {
+          hasPersistenceConfig: !!input.persistence_config,
+          hasUpdatedVisionState: !!updatedVisionState
+        });
       }
 
       return {

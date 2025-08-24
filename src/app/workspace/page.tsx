@@ -25,8 +25,24 @@ export default function WorkspaceHomePage() {
 
   const quickActions = [
     {
-      title: 'Create Proposal',
-      description: 'Start building a new proposal for your client',
+      title: 'Vision',
+      description: 'Create and develop strategic visions with AI-powered assistance',
+      href: '/vision',
+      icon: Eye,
+      color: 'bg-purple-500',
+      hoverColor: 'hover:bg-purple-600'
+    },
+    {
+      title: 'Leads',
+      description: 'Track and manage your sales opportunities',
+      href: '/leads',
+      icon: Users,
+      color: 'bg-green-500',
+      hoverColor: 'hover:bg-green-600'
+    },
+    {
+      title: 'Proposals',
+      description: 'Build compelling proposals that win deals',
       href: '/proposals',
       icon: FileText,
       color: 'bg-blue-500',
@@ -34,25 +50,9 @@ export default function WorkspaceHomePage() {
     },
     {
       title: 'AI Assistant',
-      description: 'Get AI-powered insights and assistance',
+      description: 'Get AI-powered insights and assistance for your sales process',
       href: '/chat',
       icon: MessageSquare,
-      color: 'bg-purple-500',
-      hoverColor: 'hover:bg-purple-600'
-    },
-    {
-      title: 'Manage Leads',
-      description: 'Track and organize your sales opportunities',
-      href: '/leads',
-      icon: TrendingUp,
-      color: 'bg-green-500',
-      hoverColor: 'hover:bg-green-600'
-    },
-    {
-      title: 'Vision Board',
-      description: 'Visualize your sales strategy and goals',
-      href: '/vision',
-      icon: Eye,
       color: 'bg-orange-500',
       hoverColor: 'hover:bg-orange-600'
     }

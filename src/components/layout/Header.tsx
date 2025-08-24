@@ -187,39 +187,17 @@ export default function Header() {
             </div>
           </div>
 
-          {/* Center: Desktop Navigation - hidden when space is limited */}
-          <nav className="hidden lg:flex items-center justify-center space-x-6 flex-shrink-0">
-            <Link 
-              href="/workspace" 
-              className="text-gray-500 hover:text-gray-700 transition-colors font-medium whitespace-nowrap"
-            >
-              Home
-            </Link>
-            <Link 
-              href="/vision" 
-              className="text-gray-500 hover:text-gray-700 transition-colors font-medium whitespace-nowrap"
-            >
-              Vision
-            </Link>
-            <Link 
-              href="/leads" 
-              className="text-gray-500 hover:text-gray-700 transition-colors font-medium whitespace-nowrap"
-            >
-              Leads
-            </Link>
-            <Link 
-              href="/proposals" 
-              className="text-gray-500 hover:text-gray-700 transition-colors font-medium whitespace-nowrap"
-            >
-              Proposals
-            </Link>
-            <Link 
-              href="/chat" 
-              className="text-gray-500 hover:text-gray-700 transition-colors font-medium whitespace-nowrap"
-            >
-              AI Assistant
-            </Link>
-          </nav>
+          {/* Center: Desktop Navigation - only show Home for authenticated users */}
+          {user && (
+            <nav className="hidden lg:flex items-center justify-center space-x-6 flex-shrink-0">
+              <Link 
+                href="/workspace" 
+                className="text-gray-500 hover:text-gray-700 transition-colors font-medium whitespace-nowrap"
+              >
+                Home
+              </Link>
+            </nav>
+          )}
 
           {/* Right: User Menu */}
           <div className="flex items-center justify-end space-x-2 flex-shrink-0">
@@ -251,7 +229,7 @@ export default function Header() {
 
               </div>
             ) : (
-              <div className="flex items-center space-x-3">
+              <div className="hidden sm:flex items-center space-x-3">
                 <Button variant="ghost" size="sm" onClick={handleSignIn}>
                   Sign In
                 </Button>
@@ -261,7 +239,7 @@ export default function Header() {
               </div>
             )}
 
-            {/* Mobile Menu Button - shows when navigation is hidden */}
+            {/* Mobile Menu Button - shows for unauthenticated users or when workspace switcher is hidden */}
             <button
               onClick={() => showMobileMenu ? closeMobileMenu() : setShowMobileMenu(true)}
               className="lg:hidden p-2 rounded-lg glass hover:bg-white/20 transition-all"
@@ -275,7 +253,7 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Mobile Menu - shows when navigation is hidden */}
+        {/* Mobile Menu - shows when navigation is hidden or for unauthenticated users */}
         {showMobileMenu && (
           <div className={`lg:hidden border-t border-white/20 py-4 glass transform transition-all duration-150 ease-out z-[60] ${
             isMobileMenuClosing ? 'animate-slide-up' : 'animate-slide-down'
@@ -294,43 +272,46 @@ export default function Header() {
               </div>
             )}
             
-            <nav className="flex flex-col space-y-1">
-              <Link 
-                href="/workspace"
-                onClick={closeMobileMenu} 
-                className="w-full flex items-center px-3 py-2 text-left hover:bg-gray-50 transition-colors text-sm font-medium text-gray-900"
-              >
-                Home
-              </Link>
-              <Link 
-                href="/vision"
-                onClick={closeMobileMenu} 
-                className="w-full flex items-center px-3 py-2 text-left hover:bg-gray-50 transition-colors text-sm font-medium text-gray-900"
-              >
-                Vision
-              </Link>
-              <Link 
-                href="/leads"
-                onClick={closeMobileMenu} 
-                className="w-full flex items-center px-3 py-2 text-left hover:bg-gray-50 transition-colors text-sm font-medium text-gray-900"
-              >
-                Leads
-              </Link>
-              <Link 
-                href="/proposals"
-                onClick={closeMobileMenu} 
-                className="w-full flex items-center px-3 py-2 text-left hover:bg-gray-50 transition-colors text-sm font-medium text-gray-900"
-              >
-                Proposals
-              </Link>
-              <Link 
-                href="/chat"
-                onClick={closeMobileMenu} 
-                className="w-full flex items-center px-3 py-2 text-left hover:bg-gray-50 transition-colors text-sm font-medium text-gray-900"
-              >
-                AI Assistant
-              </Link>
-            </nav>
+            {/* Navigation - only show Home for authenticated users */}
+            {user && (
+              <nav className="flex flex-col space-y-1">
+                <Link 
+                  href="/workspace"
+                  onClick={closeMobileMenu} 
+                  className="w-full flex items-center px-3 py-2 text-left hover:bg-gray-50 transition-colors text-sm font-medium text-gray-900"
+                >
+                  Home
+                </Link>
+              </nav>
+            )}
+
+            {/* Authentication buttons - only show for unauthenticated users */}
+            {!user && (
+              <div className="flex flex-col space-y-3 px-3">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    closeMobileMenu();
+                    handleSignIn();
+                  }}
+                  className="w-full text-left justify-center"
+                >
+                  Sign In
+                </Button>
+                <Button 
+                  variant="primary" 
+                  size="sm" 
+                  onClick={() => {
+                    closeMobileMenu();
+                    handleSignUp();
+                  }}
+                  className="w-full text-left justify-center"
+                >
+                  Get Started
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>

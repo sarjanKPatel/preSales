@@ -19,14 +19,14 @@ export class IntentClassifier implements Tool<IntentClassifierInput, IntentClass
       
       const prompt = this.buildClassificationPrompt(input);
       
-      console.log('[IntentClassifier] Sending to LLM...');
+      // console.log('[IntentClassifier] Sending to LLM...');
       const response = await this.llmProvider.complete(prompt, {
         model: 'gpt-4o',
         maxTokens: 300,
         temperature: 0.1, // Low temperature for consistent classification
       });
 
-      console.log('[IntentClassifier] Raw LLM response:', response.content);
+      // console.log('[IntentClassifier] Raw LLM response:', response.content);
       
       const classification = this.parseClassificationResponse(response.content);
       
@@ -132,11 +132,11 @@ Respond with ONLY the JSON object.`;
       const intent = intentMapping[upperIntent] || IntentType.UNKNOWN;
       
       // Log mapping for debugging
-      console.log('[IntentClassifier] Intent mapping:', {
-        rawIntent: parsed.intent,
-        upperIntent,
-        mappedIntent: intent
-      });
+      // console.log('[IntentClassifier] Intent mapping:', {
+      //   rawIntent: parsed.intent,
+      //   upperIntent,
+      //   mappedIntent: intent
+      // });
       
       // Special handling: if reasoning mentions greeting but intent is unknown, correct it
       if (intent === IntentType.UNKNOWN && parsed.reasoning?.toLowerCase().includes('greeting')) {
