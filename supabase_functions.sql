@@ -123,7 +123,68 @@ BEGIN
 END;
 $$;
 
+-- Function 4: create_vision_atomic
+-- Creates a new vision atomically
+CREATE OR REPLACE FUNCTION public.create_vision_atomic(
+  p_title TEXT,
+  p_category TEXT,
+  p_impact TEXT,
+  p_timeframe TEXT,
+  p_tags TEXT[],
+  p_workspace_id UUID,
+  p_user_id UUID,
+  p_vision_state JSONB,
+  p_completeness_score INTEGER
+)
+RETURNS TABLE(
+  id UUID,
+  title TEXT,
+  vision_state JSONB,
+  completeness_score INTEGER
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  new_vision RECORD;
+BEGIN
+  INSERT INTO visions (
+    title,
+    category,
+    impact,
+    timeframe,
+    tags,
+    workspace_id,
+    created_by,
+    vision_state,
+    completeness_score,
+    created_at,
+    updated_at
+  ) VALUES (
+    p_title,
+    p_category,
+    p_impact,
+    p_timeframe,
+    p_tags,
+    p_workspace_id,
+    p_user_id,
+    p_vision_state,
+    p_completeness_score,
+    NOW(),
+    NOW()
+  )
+  RETURNING * INTO new_vision;
+  
+  RETURN QUERY SELECT 
+    new_vision.id,
+    new_vision.title,
+    new_vision.vision_state,
+    new_vision.completeness_score;
+END;
+$$;
+
 -- Grant necessary permissions
 GRANT EXECUTE ON FUNCTION public.get_vision_for_update(UUID, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.update_vision_atomic(UUID, JSONB, INTEGER, UUID, UUID, INTEGER) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.update_vision_state(UUID, JSONB) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.create_vision_atomic(TEXT, TEXT, TEXT, TEXT, TEXT[], UUID, UUID, JSONB, INTEGER) TO authenticated;

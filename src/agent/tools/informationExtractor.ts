@@ -30,6 +30,8 @@ export class InformationExtractor implements Tool<InformationExtractorInput, Inf
       const prompt = this.buildExtractionPrompt(user_message, current_vision, session_context);
       
       console.log('[InformationExtractor] Sending to LLM for extraction...');
+      console.log('[InformationExtractor] Prompt preview (first 500 chars):', prompt.substring(0, 500));
+      console.log('[InformationExtractor] User message being extracted:', user_message);
       
       // Get LLM response
       const response = await this.llmProvider.complete(prompt, {
@@ -67,7 +69,7 @@ export class InformationExtractor implements Tool<InformationExtractorInput, Inf
       
       console.log('[Extraction] Vision state AFTER merging:', JSON.stringify(updatedVisionState, null, 2));
 
-      // Persist if config provided
+      // Persist business data to vision state
       if (input.persistence_config && updatedVisionState) {
         console.log('[InformationExtractor] Attempting database persistence...', {
           visionId: input.persistence_config.vision_id,
@@ -76,12 +78,29 @@ export class InformationExtractor implements Tool<InformationExtractorInput, Inf
           hasVisionState: !!updatedVisionState
         });
         
+        // Check if company name changed to update title
+        const companyNameChanged = !!(current_vision?.company_name !== updatedVisionState.company_name && 
+                                     updatedVisionState.company_name);
+        
+        if (companyNameChanged) {
+          console.log('[InformationExtractor] Company name changed, will update vision title:', {
+            oldName: current_vision?.company_name,
+            newName: updatedVisionState.company_name
+          });
+        }
+        
+        // Separate business data from personal data
+        const { metadata, ...businessVisionState } = updatedVisionState;
+        const personalData = extractionResult.custom_fields || {};
+        
         try {
           const persistResult = await this.visionPersistence.updateVisionAtomic({
             visionId: input.persistence_config.vision_id,
-            visionState: updatedVisionState,
+            visionState: businessVisionState, // Only business data to database
             workspaceId: input.persistence_config.workspace_id,
             userId: input.persistence_config.user_id,
+            shouldUpdateTitle: companyNameChanged,
+            newTitle: companyNameChanged ? businessVisionState.company_name : undefined,
           });
 
           console.log('[InformationExtractor] Persistence attempt completed:', {
@@ -103,6 +122,26 @@ export class InformationExtractor implements Tool<InformationExtractorInput, Inf
         } catch (error) {
           console.error('[InformationExtractor] ❌ Persistence exception:', error);
           console.error('[InformationExtractor] Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+        }
+        
+        // Index personal data directly to RAG (not in vision_state)
+        if (Object.keys(personalData).length > 0) {
+          console.log('[InformationExtractor] Indexing personal data to RAG:', personalData);
+          try {
+            // Import VectorStore here to avoid circular dependencies
+            const { VectorStore } = await import('../rag/vectorStore');
+            const vectorStore = new VectorStore();
+            
+            await vectorStore.indexPersonalData(
+              input.persistence_config.vision_id,
+              personalData,
+              input.persistence_config.workspace_id
+            );
+            
+            console.log('[InformationExtractor] ✅ Personal data indexed to RAG');
+          } catch (error) {
+            console.error('[InformationExtractor] ❌ Failed to index personal data:', error);
+          }
         }
       } else {
         console.warn('[InformationExtractor] ⚠️ Skipping persistence:', {
@@ -143,11 +182,18 @@ Extract structured company vision information from the user message and return O
 
 ### Rules:
 1. Map information to the standard schema when possible.
-2. If a piece of information does not match any schema field but is still important, 
+2. **IMPORTANT**: If a piece of information does not match any schema field but is still valuable, 
    store it under metadata.custom_fields with a meaningful key.
 3. Use confidence scores from 0.0–1.0 based on extraction certainty.
 4. If confidence < 0.5, set value to null.
 5. Do not invent facts. Only use data clearly stated or strongly implied.
+
+### Custom Fields Examples:
+- User names, contact info → "user_name", "contact_email"
+- Specific product names → "product_name"
+- Team size, funding → "team_size", "funding_status"
+- Geographic info → "location", "target_market"
+- Any other valuable info not in the standard schema
 
 ${recentContext}User message: "${userMessage}"
 
@@ -206,6 +252,12 @@ Current vision context: ${contextSummary}
 - "direct": Explicitly stated in the message
 - "inferred": Logically derived from stated information  
 - "contextual": Inferred from conversation history or existing vision
+
+### Special Instructions:
+- For user messages like "My name is John" → put in custom_fields as "user_name": "John"
+- For product/service names not fitting schema → put in custom_fields
+- For any personal or organizational details → check if they fit schema first, then custom_fields
+- ALWAYS check if information should go in custom_fields if it doesn't match standard schema
 
 Only extract information explicitly mentioned or clearly implied. Do not hallucinate data.`;
   }

@@ -135,8 +135,7 @@ export default function CompanyVisionPage() {
   // Filter visions based on search and status
   const filteredVisions = visions.filter(vision => {
     const matchesSearch = !searchQuery || 
-      vision.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      vision.description.toLowerCase().includes(searchQuery.toLowerCase());
+      vision.title.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesStatus = selectedStatus === 'all' || vision.status === selectedStatus;
     

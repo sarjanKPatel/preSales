@@ -7,6 +7,8 @@ export interface VisionUpdateInput {
   workspaceId: string;
   userId: string;
   expectedVersion?: number;
+  shouldUpdateTitle?: boolean;
+  newTitle?: string;
 }
 
 export interface VisionUpdateResult {
@@ -28,7 +30,7 @@ export class VisionPersistence {
    * Atomically updates a vision with version control and rollback safety
    */
   async updateVisionAtomic(input: VisionUpdateInput): Promise<VisionUpdateResult> {
-    const { visionId, visionState, workspaceId, userId, expectedVersion } = input;
+    const { visionId, visionState, workspaceId, userId, expectedVersion, shouldUpdateTitle, newTitle } = input;
 
     try {
       // Step 1: Start a transaction by getting current vision with FOR UPDATE lock
@@ -78,17 +80,40 @@ export class VisionPersistence {
       const newVersion = (currentVision.completeness_score || 0) + 1;
       const completenessScore = this.calculateCompletenessScore(visionState);
 
-      // Step 4: Prepare clean vision state (remove metadata)
-      const { metadata, ...cleanVisionState } = visionState;
+      // Step 4: Prepare vision state - remove only system-level metadata duplicates, keep business data
+      const { metadata = {}, ...cleanVisionState } = visionState;
+      
+      // Remove only system-level metadata that would duplicate database columns
+      const {
+        session_id,
+        workspace_id,
+        user_id, 
+        created_at,
+        updated_at,
+        vision_id,
+        vision_title,
+        vision_category,
+        vision_impact,
+        version,
+        ...businessMetadata
+      } = metadata;
+      
+      // Keep all business-related metadata in the vision state
+      if (Object.keys(businessMetadata).length > 0) {
+        cleanVisionState.metadata = businessMetadata;
+      }
       
       // Step 5: Atomic update using RPC for transaction safety
       console.log('[VisionPersistence] Calling update_vision_atomic RPC...', {
         visionId,
         cleanVisionStateKeys: Object.keys(cleanVisionState),
+        businessMetadataKeys: Object.keys(businessMetadata),
+        hasBusinessMetadata: Object.keys(businessMetadata).length > 0,
         completenessScore,
         workspaceId,
         userId,
-        expectedVersion: currentVision.completeness_score || 0
+        currentVisionScore: currentVision.completeness_score,
+        expectedVersionToPass: currentVision.completeness_score
       });
 
       const { data: updateResult, error: updateError } = await supabase
@@ -98,7 +123,7 @@ export class VisionPersistence {
           p_completeness_score: completenessScore,
           p_workspace_id: workspaceId,
           p_user_id: userId,
-          p_expected_version: currentVision.completeness_score || 0
+          p_expected_version: currentVision.completeness_score
         });
 
       console.log('[VisionPersistence] RPC response:', {
@@ -118,7 +143,28 @@ export class VisionPersistence {
         };
       }
 
-      // Step 6: Log the successful change
+      // Step 6: Update title if company name changed
+      if (shouldUpdateTitle && newTitle) {
+        console.log('[VisionPersistence] Updating vision title:', {
+          visionId,
+          newTitle
+        });
+
+        const { error: titleUpdateError } = await supabase
+          .from('visions')
+          .update({ title: newTitle })
+          .eq('id', visionId)
+          .eq('workspace_id', workspaceId);
+
+        if (titleUpdateError) {
+          console.error('[VisionPersistence] ❌ Failed to update title:', titleUpdateError);
+          // Don't fail the entire operation for title update failure
+        } else {
+          console.log('[VisionPersistence] ✅ Vision title updated successfully');
+        }
+      }
+
+      // Step 7: Log the successful change
       await this.logVisionChange({
         visionId,
         userId,
@@ -151,7 +197,6 @@ export class VisionPersistence {
    */
   async createVisionAtomic(input: {
     title: string;
-    description: string;
     category: 'product' | 'market' | 'strategy' | 'innovation';
     impact: 'low' | 'medium' | 'high';
     timeframe: 'short-term' | 'medium-term' | 'long-term';
@@ -163,7 +208,6 @@ export class VisionPersistence {
     try {
       const {
         title,
-        description,
         category,
         impact,
         timeframe,
@@ -180,7 +224,6 @@ export class VisionPersistence {
       const { data: newVision, error: createError } = await supabase
         .rpc('create_vision_atomic', {
           p_title: title,
-          p_description: description,
           p_category: category,
           p_impact: impact,
           p_timeframe: timeframe,
@@ -283,6 +326,17 @@ export class VisionPersistence {
     });
 
     score += Math.min(10, filledEnhancements.length * 2);
+
+    // Custom fields bonus (2 points for having any custom fields)
+    const customFields = visionState.custom_fields || visionState.metadata?.custom_fields;
+    if (customFields && Object.keys(customFields).length > 0) {
+      score += 2;
+    }
+    
+    // Gap analysis bonus (1 point for having gap analysis data)
+    if (visionState.metadata?.gap_analysis) {
+      score += 1;
+    }
 
     return Math.min(maxScore, Math.max(0, score));
   }

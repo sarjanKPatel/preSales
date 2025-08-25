@@ -155,17 +155,37 @@ export class TurnHandler {
       { documentType: 'vision', limit: 3 }
     );
 
+    console.log('[HandleTurn] RAG search results:', {
+      query: config.userMessage,
+      workspaceId: config.workspaceId,
+      resultsCount: ragResults.length,
+      results: ragResults.map(r => ({
+        similarity: r.similarity,
+        content: r.content.substring(0, 50) + '...',
+        metadata: r.metadata
+      }))
+    });
+
     const result = await questionAnswering.execute({
       user_question: config.userMessage,
       vision_state: context.vision_state,
-      conversation_history: context.messages.slice(-5).map(m => m.content),
       rag_context: ragResults,
       intent_details: intent
     });
 
     if (result.success && result.data) {
-      // Format response with ResponseFormatter
-      yield* this.formatResponse(result.data, 'question');
+      // Stream the question answer directly
+      if (result.data.answer) {
+        yield { type: 'token', content: result.data.answer };
+        
+        // Add gap-based follow-up question if available
+        if (result.data.followup_question) {
+          yield { type: 'token', content: `\n\n${result.data.followup_question}` };
+        }
+      } else {
+        yield { type: 'token', content: JSON.stringify(result.data) };
+      }
+      yield { type: 'done' };
     } else {
       yield { type: 'token', content: "I couldn't find an answer to your question." };
       yield { type: 'done' };
@@ -196,24 +216,40 @@ export class TurnHandler {
       // Update RAG index
       await this.updateRAGIndex(config.visionId!, extractionResult.data.updated_vision_state!, config.workspaceId!);
       
-      // Format acknowledgment using existing 'information' type
-      const formatter = toolRegistry.get('ResponseFormatter');
-      if (formatter) {
-        const ackResult = await formatter.execute({
-          type: 'information',  // Use existing information type
-          data: extractionResult.data
+      // Generate dynamic response using LLM
+      const dynamicGenerator = toolRegistry.get('DynamicResponseGenerator');
+      if (dynamicGenerator) {
+        const dynamicResult = await dynamicGenerator.execute({
+          userMessage: config.userMessage,
+          conversationHistory: context.messages,
+          visionState: extractionResult.data.updated_vision_state,
+          intent: intent,
+          context: {
+            sessionId: config.sessionId,
+            workspaceId: config.workspaceId!,
+            userId: config.userId!,
+            extractionResult: extractionResult.data
+          }
         });
         
-        if (ackResult.success && ackResult.data) {
-          yield* this.streamFormattedResponse(ackResult.data);
+        if (dynamicResult.success && dynamicResult.data) {
+          yield { type: 'token', content: dynamicResult.data.response };
+          
+          // Ask follow-up if recommended
+          if (dynamicResult.data.shouldAskFollowUp && dynamicResult.data.followUpQuestion) {
+            yield { type: 'token', content: `\n\n${dynamicResult.data.followUpQuestion}` };
+          }
+          yield { type: 'done' };
+        } else {
+          // Fallback to gap detection if dynamic response fails
+          yield { type: 'token', content: 'Thank you for that information. I\'ve updated your vision.' };
+          yield* this.checkGapsAndGenerateQuestions(config, context, extractionResult.data.updated_vision_state!);
         }
       } else {
-        // Fallback acknowledgment
+        // Fallback to old method if tool not available
         yield { type: 'token', content: 'Thank you for that information. I\'ve updated your vision.' };
+        yield* this.checkGapsAndGenerateQuestions(config, context, extractionResult.data.updated_vision_state!);
       }
-      
-      // Then check for gaps and generate dynamic questions
-      yield* this.checkGapsAndGenerateQuestions(config, context, extractionResult.data.updated_vision_state!);
     } else {
       yield { type: 'token', content: 'I couldn\'t process that information. Could you please try again?' };
       yield { type: 'done' };
@@ -239,7 +275,11 @@ export class TurnHandler {
             vision_state: context.vision_state,
             workspace_id: config.workspaceId!
           });
-          yield* this.formatResponse(result.data, 'finalization');
+          if (result.success && result.data) {
+            yield { type: 'token', content: result.data.message || 'Vision finalized successfully!' };
+          } else {
+            yield { type: 'token', content: 'Failed to finalize vision.' };
+          }
         }
         break;
         
@@ -275,31 +315,78 @@ export class TurnHandler {
       context: context
     });
 
-    yield* this.formatResponse(result.data, 'ui_action');
+    if (result.success && result.data) {
+      yield { type: 'token', content: result.data.message || 'UI action completed.' };
+    } else {
+      yield { type: 'token', content: 'UI action failed.' };
+    }
+    yield { type: 'done' };
   }
 
   // Route: Handle Greeting
   private async *handleGreeting(config: TurnConfig, context: AgentContext, intent: any): AsyncGenerator<StreamResponse> {
-    // First send a greeting
-    const formatter = toolRegistry.get('ResponseFormatter');
-    if (formatter) {
-      const result = await formatter.execute({
-        type: 'greeting',
-        vision_state: context.vision_state,
-        metadata: { completeness: context.vision_state?.metadata?.validation_score || 0 }
+    // Generate dynamic greeting response
+    const dynamicGenerator = toolRegistry.get('DynamicResponseGenerator');
+    if (dynamicGenerator) {
+      const dynamicResult = await dynamicGenerator.execute({
+        userMessage: config.userMessage,
+        conversationHistory: context.messages,
+        visionState: context.vision_state,
+        intent: intent,
+        context: {
+          sessionId: config.sessionId,
+          workspaceId: config.workspaceId!,
+          userId: config.userId!,
+        }
       });
-      yield* this.streamFormattedResponse(result.data);
+      
+      if (dynamicResult.success && dynamicResult.data) {
+        yield { type: 'token', content: dynamicResult.data.response };
+        
+        // Ask follow-up if recommended
+        if (dynamicResult.data.shouldAskFollowUp && dynamicResult.data.followUpQuestion) {
+          yield { type: 'token', content: `\n\n${dynamicResult.data.followUpQuestion}` };
+        }
+        yield { type: 'done' };
+        return;
+      }
     }
 
-    // Then check for gaps and ask questions to continue
-    if (context.vision_state) {
-      yield { type: 'metadata', metadata: { step: 'checking_gaps_after_greeting' } };
-      yield* this.checkGapsAndGenerateQuestions(config, context, context.vision_state);
-    }
+    // Fallback if dynamic generation fails
+    yield { type: 'token', content: 'Hello! How can I help you with your vision today?' };
+    yield { type: 'done' };
   }
 
   // Route: Handle Unknown
   private async *handleUnknown(config: TurnConfig, context: AgentContext, intent: any): AsyncGenerator<StreamResponse> {
+    // Try to generate a dynamic response for unknown intents
+    const dynamicGenerator = toolRegistry.get('DynamicResponseGenerator');
+    if (dynamicGenerator) {
+      const dynamicResult = await dynamicGenerator.execute({
+        userMessage: config.userMessage,
+        conversationHistory: context.messages,
+        visionState: context.vision_state,
+        intent: intent,
+        context: {
+          sessionId: config.sessionId,
+          workspaceId: config.workspaceId!,
+          userId: config.userId!,
+        }
+      });
+      
+      if (dynamicResult.success && dynamicResult.data) {
+        yield { type: 'token', content: dynamicResult.data.response };
+        
+        // Ask follow-up if recommended
+        if (dynamicResult.data.shouldAskFollowUp && dynamicResult.data.followUpQuestion) {
+          yield { type: 'token', content: `\n\n${dynamicResult.data.followUpQuestion}` };
+        }
+        yield { type: 'done' };
+        return;
+      }
+    }
+    
+    // Fallback if dynamic generation fails
     yield { 
       type: 'token', 
       content: "I'm not sure how to help with that. Could you please rephrase or ask something specific about your vision?" 
@@ -324,7 +411,13 @@ export class TurnHandler {
 
     if (gapResult.success && gapResult.data?.gaps_found) {
       // Use gap detector questions
-      yield* this.formatResponse(gapResult.data, 'questions');
+      if (gapResult.data.next_questions && gapResult.data.next_questions.length > 0) {
+        const questionsText = gapResult.data.next_questions.map((q: string, i: number) => `${i + 1}. ${q}`).join('\n');
+        yield { type: 'token', content: `I need some more information:\n\n${questionsText}` };
+      } else {
+        yield { type: 'token', content: 'Thank you for that information!' };
+      }
+      yield { type: 'done' };
     } else {
       // No gaps found - check if ready to finalize
       yield* this.checkReadyToFinalize(visionState);
@@ -336,74 +429,16 @@ export class TurnHandler {
     const completeness = visionState.metadata?.validation_score || 0;
     
     if (completeness >= 80) {
-      const formatter = toolRegistry.get('ResponseFormatter');
-      if (formatter) {
-        const result = await formatter.execute({
-          type: 'ready_to_finalize',
-          vision_state: visionState,
-          metadata: { completeness }
-        });
-        yield* this.streamFormattedResponse(result.data);
-      } else {
-        yield { 
-          type: 'token', 
-          content: `Great! Your vision is ${completeness}% complete. Would you like to finalize it?` 
-        };
-        yield { type: 'done' };
-      }
+      yield { 
+        type: 'token', 
+        content: `Great! Your vision is ${completeness}% complete. Would you like to finalize it?` 
+      };
     } else {
       yield { type: 'token', content: 'Thank you for that information. Your vision is taking shape!' };
-      yield { type: 'done' };
     }
-  }
-
-  // Helper: Format response
-  private async *formatResponse(data: any, responseType: string): AsyncGenerator<StreamResponse> {
-    const formatter = toolRegistry.get('ResponseFormatter');
-    if (formatter) {
-      const result = await formatter.execute({
-        type: responseType,
-        data: data,
-        includeUI: true
-      });
-      yield* this.streamFormattedResponse(result.data);
-    } else {
-      // Fallback formatting
-      if (typeof data === 'string') {
-        yield { type: 'token', content: data };
-      } else if (data.content) {
-        yield { type: 'token', content: data.content };
-      } else if (data.answer) {
-        // Handle QuestionAnswering output
-        yield { type: 'token', content: data.answer };
-      } else if (data.next_questions) {
-        // Handle GapDetector output
-        const questionsText = data.next_questions.map((q: string, i: number) => `${i + 1}. ${q}`).join('\n');
-        yield { type: 'token', content: `I need some more information:\n\n${questionsText}` };
-      } else {
-        yield { type: 'token', content: JSON.stringify(data) };
-      }
-      yield { type: 'done' };
-    }
-  }
-
-  // Helper: Stream formatted response
-  private async *streamFormattedResponse(formattedData: any): AsyncGenerator<StreamResponse> {
-    if (formattedData.content) {
-      yield { type: 'token', content: formattedData.content };
-    }
-    
-    if (formattedData.uiElements) {
-      yield { 
-        type: 'metadata', 
-        metadata: { 
-          uiElements: formattedData.uiElements 
-        } 
-      };
-    }
-    
     yield { type: 'done' };
   }
+
 
   // Helper: Update RAG index
   private async updateRAGIndex(visionId: string, visionState: any, workspaceId: string): Promise<void> {

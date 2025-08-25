@@ -1,21 +1,18 @@
 import { Tool, ToolResult } from './types';
 import { VisionState } from '../../types';
 import { OpenAIProvider } from '../llm/provider';
+import { GapDetector } from './gapDetector';
 
 export interface QuestionAnsweringInput {
   user_question: string;
   vision_state?: VisionState;
-  conversation_history?: string[];
   rag_context?: any[];
   intent_details?: any;
 }
 
 export interface QuestionAnsweringOutput {
   answer: string;
-  confidence: number;
-  sources: string[];
-  needs_more_info: boolean;
-  suggested_followups?: string[];
+  followup_question?: string;
 }
 
 /**
@@ -25,8 +22,11 @@ export interface QuestionAnsweringOutput {
 export class QuestionAnswering implements Tool<QuestionAnsweringInput, QuestionAnsweringOutput> {
   name = 'QuestionAnswering';
   description = 'Answers user questions about the vision using available context and RAG';
+  private gapDetector: GapDetector;
 
-  constructor(private llmProvider: OpenAIProvider) {}
+  constructor(private llmProvider: OpenAIProvider) {
+    this.gapDetector = new GapDetector();
+  }
 
   async execute(input: QuestionAnsweringInput): Promise<ToolResult<QuestionAnsweringOutput>> {
     try {
@@ -36,32 +36,51 @@ export class QuestionAnswering implements Tool<QuestionAnsweringInput, QuestionA
         question: user_question,
         hasVisionState: !!vision_state,
         companyName: vision_state?.company_name,
-        ragResultsCount: rag_context?.length || 0
+        ragResultsCount: rag_context?.length || 0,
+        hasRAGContext: !!(rag_context && rag_context.length > 0)
       });
 
-      // First, try to answer directly from vision state
-      const directAnswer = this.getDirectAnswer(user_question, vision_state);
-      if (directAnswer) {
-        console.log('[QuestionAnswering] Found direct answer:', directAnswer.answer);
-        return {
-          success: true,
-          data: directAnswer,
-        };
+      // Log RAG context details for debugging
+      if (rag_context && rag_context.length > 0) {
+        console.log('[QuestionAnswering] RAG context details:');
+        rag_context.forEach((result, index) => {
+          console.log(`  [${index}] Similarity: ${result.similarity}, Content: "${result.content.substring(0, 100)}..."`);
+          console.log(`      Metadata:`, result.metadata);
+        });
+      } else {
+        console.log('[QuestionAnswering] No RAG context available');
       }
 
-      console.log('[QuestionAnswering] No direct answer, using LLM...');
+      console.log('[QuestionAnswering] Using LLM for dynamic answer...');
       
-      // If no direct answer, use LLM with context
+      // Always use LLM with context for dynamic responses
       const prompt = this.buildAnswerPrompt(user_question, vision_state, rag_context);
+      console.log('[QuestionAnswering] Sending prompt to LLM:', {
+        promptLength: prompt.length,
+        model: 'gpt-4o',
+        temperature: 0.8, // Increased for more variation
+        timestamp: new Date().toISOString()
+      });
+
       const response = await this.llmProvider.complete(prompt, {
         model: 'gpt-4o',
         maxTokens: 300,
-        temperature: 0.3,
+        temperature: 0.8, // Increased from 0.3 to 0.8 for more natural variation
       });
 
       console.log('[QuestionAnswering] LLM response:', response.content);
       
-      return this.parseResponse(response.content);
+      const result = this.parseResponse(response.content);
+      
+      // Generate gap-based follow-up question if needed
+      if (result.success && result.data && vision_state) {
+        const followupQuestion = await this.generateGapBasedFollowup(vision_state);
+        if (followupQuestion) {
+          result.data.followup_question = followupQuestion;
+        }
+      }
+      
+      return result;
     } catch (error) {
       return {
         success: false,
@@ -70,127 +89,64 @@ export class QuestionAnswering implements Tool<QuestionAnsweringInput, QuestionA
     }
   }
 
-  private getDirectAnswer(question: string, vision_state?: VisionState): QuestionAnsweringOutput | null {
-    if (!vision_state) return null;
-
-    const lowerQuestion = question.toLowerCase();
-
-    // Company name
-    if (lowerQuestion.includes('company') && lowerQuestion.includes('name')) {
-      if (vision_state.company_name) {
-        return {
-          answer: `The company name is ${vision_state.company_name}.`,
-          confidence: 1.0,
-          sources: ['vision_state.company_name'],
-          needs_more_info: false,
-        };
-      } else {
-        return {
-          answer: "I don't have the company name recorded yet. What is your company's name?",
-          confidence: 1.0,
-          sources: [],
-          needs_more_info: true,
-        };
-      }
-    }
-
-    // Industry
-    if (lowerQuestion.includes('industry') || lowerQuestion.includes('sector')) {
-      if (vision_state.industry) {
-        return {
-          answer: `The company operates in the ${vision_state.industry} industry.`,
-          confidence: 1.0,
-          sources: ['vision_state.industry'],
-          needs_more_info: false,
-        };
-      } else {
-        return {
-          answer: "I don't have the industry information yet. What industry does your company operate in?",
-          confidence: 1.0,
-          sources: [],
-          needs_more_info: true,
-        };
-      }
-    }
-
-    // Vision statement
-    if (lowerQuestion.includes('vision') && (lowerQuestion.includes('statement') || lowerQuestion.includes('what is'))) {
-      if (vision_state.vision_statement) {
-        return {
-          answer: `Your vision statement is: "${vision_state.vision_statement}"`,
-          confidence: 1.0,
-          sources: ['vision_state.vision_statement'],
-          needs_more_info: false,
-        };
-      } else {
-        return {
-          answer: "I don't have a vision statement recorded yet. What vision would you like to develop for your organization?",
-          confidence: 1.0,
-          sources: [],
-          needs_more_info: true,
-        };
-      }
-    }
-
-    // Company size
-    if (lowerQuestion.includes('size') || lowerQuestion.includes('employees') || lowerQuestion.includes('how big')) {
-      if (vision_state.company_size) {
-        return {
-          answer: `The company size is ${vision_state.company_size} employees.`,
-          confidence: 1.0,
-          sources: ['vision_state.company_size'],
-          needs_more_info: false,
-        };
-      }
-    }
-
-    // Strategic priorities
-    if (lowerQuestion.includes('priorities') || lowerQuestion.includes('strategic')) {
-      if (vision_state.strategic_priorities && vision_state.strategic_priorities.length > 0) {
-        return {
-          answer: `Your strategic priorities are: ${vision_state.strategic_priorities.join(', ')}.`,
-          confidence: 1.0,
-          sources: ['vision_state.strategic_priorities'],
-          needs_more_info: false,
-        };
-      }
-    }
-
-    return null;
-  }
 
   private buildAnswerPrompt(question: string, vision_state?: VisionState, rag_context?: any[]): string {
     const visionSummary = vision_state ? this.summarizeVisionState(vision_state) : 'No vision data available.';
-    const ragSummary = rag_context && rag_context.length > 0 
-      ? rag_context.map(r => r.content).join('\n\n') 
-      : '';
+    
+    // Format RAG context with more structure
+    let ragSummary = '';
+    if (rag_context && rag_context.length > 0) {
+      ragSummary = rag_context.map((result, index) => {
+        const similarity = result.similarity ? ` (relevance: ${Math.round(result.similarity * 100)}%)` : '';
+        return `[${index + 1}]${similarity}: ${result.content}`;
+      }).join('\n\n');
+    }
 
-    return `You are an AI assistant helping with vision creation. Answer the user's question based on the available vision data.
+    // Add randomness to prompt to ensure different responses
+    const responseStyles = [
+      "Answer naturally and conversationally, like ChatGPT would",
+      "Respond in a friendly, helpful manner with natural conversation flow", 
+      "Give a warm, personable response that feels human-like",
+      "Answer with natural conversation style, being helpful and engaging"
+    ];
+    
+    const variationPrompts = [
+      "Make sure to vary your wording from previous responses",
+      "Use fresh language and don't repeat exact phrases", 
+      "Express the same information in a new, creative way",
+      "Find a unique way to phrase your response"
+    ];
 
-## Current Vision Data:
+    const randomStyle = responseStyles[Math.floor(Math.random() * responseStyles.length)];
+    const randomVariation = variationPrompts[Math.floor(Math.random() * variationPrompts.length)];
+    const timestamp = new Date().toISOString();
+
+    return `You are a friendly AI assistant. Answer the user's question using the available business information.
+
+## Current Vision State (PRIMARY SOURCE):
 ${visionSummary}
 
-${ragSummary ? `## Additional Context:\n${ragSummary}\n` : ''}
+${ragSummary ? `## Retrieved Business Context (SECONDARY SOURCE - from RAG):
+${ragSummary}\n` : ''}
 
 ## User Question:
 "${question}"
 
 ## Instructions:
-1. Answer based ONLY on the available data
-2. If information is not available, say so clearly and suggest adding it
-3. Be concise and direct
-4. Include specific values when available
+1. ${randomStyle}
+2. **PRIORITY ORDER**: Look for answers in Current Vision State FIRST, then Retrieved Business Context from RAG
+3. If information is missing from both sources, acknowledge it naturally
+4. ${randomVariation}
+5. DO NOT ask any follow-up questions in your answer
+6. ONLY provide a direct answer to the question asked
+7. Timestamp for uniqueness: ${timestamp}
 
 ## Response Format (JSON):
 {
-  "answer": "Your answer here",
-  "confidence": 0.0-1.0,
-  "sources": ["list of data sources used"],
-  "needs_more_info": boolean,
-  "suggested_followups": ["optional follow-up questions"]
+  "answer": "Your direct answer here - no follow-up questions!"
 }
 
-Respond with ONLY the JSON object.`;
+Respond with ONLY the JSON object containing your answer.`;
   }
 
   private summarizeVisionState(vision: VisionState): string {
@@ -206,6 +162,15 @@ Respond with ONLY the JSON object.`;
     if (vision.timeline) parts.push(`Timeline: ${vision.timeline}`);
     if (vision.market_size) parts.push(`Market Size: ${vision.market_size}`);
     if (vision.competitive_landscape) parts.push(`Competitive Landscape: ${vision.competitive_landscape}`);
+    
+    // Include custom fields from either root level or metadata
+    const customFields = vision.custom_fields || vision.metadata?.custom_fields;
+    if (customFields && Object.keys(customFields).length > 0) {
+      Object.entries(customFields).forEach(([key, value]) => {
+        const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        parts.push(`${formattedKey}: ${value}`);
+      });
+    }
     
     return parts.length > 0 ? parts.join('\n') : 'No vision data recorded yet.';
   }
@@ -223,10 +188,6 @@ Respond with ONLY the JSON object.`;
         success: true,
         data: {
           answer: parsed.answer || "I couldn't find that information.",
-          confidence: parsed.confidence || 0.5,
-          sources: parsed.sources || [],
-          needs_more_info: parsed.needs_more_info || false,
-          suggested_followups: parsed.suggested_followups,
         },
       };
     } catch (error) {
@@ -235,11 +196,36 @@ Respond with ONLY the JSON object.`;
         success: true,
         data: {
           answer: "I couldn't process that question properly. Could you please rephrase it?",
-          confidence: 0,
-          sources: [],
-          needs_more_info: false,
         },
       };
+    }
+  }
+
+  /**
+   * Generate a single gap-based follow-up question using GapDetector
+   */
+  private async generateGapBasedFollowup(visionState: VisionState): Promise<string | undefined> {
+    try {
+      console.log('[QuestionAnswering] Generating gap-based follow-up...');
+      
+      const gapResult = await this.gapDetector.execute({
+        vision_state: visionState,
+        context: [] // No conversation history needed, RAG handles context
+      });
+
+      if (gapResult.success && gapResult.data && gapResult.data.gaps_found) {
+        const questions = gapResult.data.next_questions;
+        if (questions && questions.length > 0) {
+          console.log('[QuestionAnswering] Generated follow-up question:', questions[0]);
+          return questions[0]; // Return only the first (highest priority) question
+        }
+      }
+      
+      console.log('[QuestionAnswering] No gaps found, no follow-up needed');
+      return undefined;
+    } catch (error) {
+      console.error('[QuestionAnswering] Failed to generate gap-based follow-up:', error);
+      return undefined;
     }
   }
 }

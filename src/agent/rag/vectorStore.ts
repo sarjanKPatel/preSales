@@ -36,50 +36,8 @@ export class VectorStore {
       // Convert vision state to chunks
       const chunks = this.visionStateToChunks(visionId, visionState);
       
-      // Generate embeddings for all chunks
-      const texts = chunks.map(chunk => chunk.content);
-      console.log(`[VectorStore] Generating embeddings for ${texts.length} chunks...`);
-      
-      let embeddings: number[][] = [];
-      try {
-        embeddings = await this.embeddingService.generateEmbeddings(texts);
-        console.log(`[VectorStore] Generated ${embeddings.length} embeddings successfully`);
-      } catch (embeddingError) {
-        console.error('[VectorStore] Embedding generation failed:', embeddingError);
-        // Continue without embeddings for now - store null embeddings
-        console.log('[VectorStore] Continuing with null embeddings due to error');
-        embeddings = texts.map(() => new Array(1536).fill(0)); // Zero vectors as fallback
-      }
-
-      // Store chunks with embeddings
-      const records = chunks.map((chunk, index) => ({
-        workspace_id: workspaceId,
-        document_id: visionId,
-        document_type: 'vision',
-        chunk_id: chunk.metadata.chunkId,
-        content: chunk.content,
-        embedding: embeddings[index] ? `[${embeddings[index].join(',')}]` : null,
-        metadata: chunk.metadata
-        // Don't include fts_content - it's a generated column
-      }));
-
-      // Delete existing chunks for this vision
-      await supabase
-        .from('document_chunks')
-        .delete()
-        .eq('document_id', visionId)
-        .eq('document_type', 'vision');
-
-      // Insert new chunks
-      const { error } = await supabase
-        .from('document_chunks')
-        .insert(records);
-
-      if (error) {
-        throw error;
-      }
-
-      console.log(`[VectorStore] Indexed ${chunks.length} chunks for vision ${visionId}`);
+      // Index chunks with embeddings (handles embedding generation internally)
+      await this.indexChunks(chunks, visionId, workspaceId);
     } catch (error) {
       console.error('[VectorStore] Failed to index vision:', error);
       throw new Error(`Failed to index vision: ${error}`);
@@ -291,9 +249,10 @@ export class VectorStore {
       });
     }
 
-    // Custom fields as separate chunks
-    if (visionState.custom_fields) {
-      Object.entries(visionState.custom_fields).forEach(([key, value]) => {
+    // Custom fields as separate chunks - check both root level and metadata
+    const customFields = visionState.custom_fields || visionState.metadata?.custom_fields;
+    if (customFields) {
+      Object.entries(customFields).forEach(([key, value]) => {
         chunks.push({
           content: this.formatChunkContent({
             title: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
@@ -309,9 +268,92 @@ export class VectorStore {
           }
         });
       });
+      
+      console.log('[VectorStore] Indexing custom fields:', Object.keys(customFields));
     }
 
     return chunks;
+  }
+
+  /**
+   * Index personal data directly to RAG without storing in vision_state
+   */
+  async indexPersonalData(visionId: string, personalData: Record<string, any>, workspaceId: string): Promise<void> {
+    try {
+      console.log('[VectorStore] Indexing personal data for vision:', visionId);
+      
+      const chunks = Object.entries(personalData).map(([key, value]) => ({
+        content: this.formatChunkContent({
+          title: `Personal: ${key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`,
+          [key]: value
+        }),
+        metadata: {
+          source: 'personal_data',
+          type: 'vision',
+          documentId: visionId,
+          chunkId: `personal_${key}`,
+          section: 'personal',
+          fieldName: key,
+          isPersonal: true
+        }
+      }));
+
+      if (chunks.length > 0) {
+        await this.indexChunks(chunks, visionId, workspaceId);
+        console.log('[VectorStore] Successfully indexed personal data chunks:', chunks.length);
+      }
+    } catch (error) {
+      console.error('[VectorStore] Failed to index personal data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Index chunks with embeddings (extracted from indexVision for reuse)
+   */
+  private async indexChunks(chunks: any[], visionId: string, workspaceId: string): Promise<void> {
+    try {
+      const texts = chunks.map(chunk => chunk.content);
+      console.log('[VectorStore] Generating embeddings for', chunks.length, 'chunks...');
+      
+      let embeddings: number[][];
+      try {
+        embeddings = await this.embeddingService.generateEmbeddings(texts);
+        console.log('[VectorStore] Generated', embeddings.length, 'embeddings successfully');
+      } catch (error) {
+        console.error('[VectorStore] Embedding generation failed:', error);
+        console.log('[VectorStore] Continuing with null embeddings due to error');
+        embeddings = texts.map(() => new Array(1536).fill(0)); // Zero vectors as fallback
+      }
+
+      // Create records for database
+      const records = chunks.map((chunk, index) => ({
+        workspace_id: workspaceId,
+        document_id: visionId,
+        document_type: 'vision',
+        chunk_id: chunk.metadata.chunkId,
+        content: chunk.content,
+        embedding: embeddings[index] ? `[${embeddings[index].join(',')}]` : null,
+        metadata: chunk.metadata
+      }));
+
+      // Insert chunks (don't delete existing ones for personal data)
+      const { error } = await supabase
+        .from('document_chunks')
+        .upsert(records, {
+          onConflict: 'document_id,chunk_id',
+          ignoreDuplicates: false
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      console.log('[VectorStore] Indexed', chunks.length, 'chunks for vision', visionId);
+    } catch (error) {
+      console.error('[VectorStore] Failed to index chunks:', error);
+      throw error;
+    }
   }
 
   /**

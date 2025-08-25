@@ -272,7 +272,6 @@ export const db = {
         workspace_id: workspaceId,
         created_by: user.user.id,
         title: input.title,
-        description: input.description,
         category: input.category,
         impact: input.impact,
         timeframe: input.timeframe,
