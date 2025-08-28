@@ -54,7 +54,7 @@ export default function WelcomePage() {
                   <Button 
                     variant="primary" 
                     size="lg" 
-                    onClick={() => router.push('/vision')}
+                    onClick={() => router.push('/workspace')}
                     className="w-full group"
                   >
                     Get Started

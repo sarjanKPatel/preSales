@@ -327,7 +327,7 @@ export class VisionPersistence {
 
     score += Math.min(10, filledEnhancements.length * 2);
 
-    // Custom fields bonus (2 points for having any custom fields)
+    // Business custom fields bonus (2 points for having business custom fields)
     const customFields = visionState.custom_fields || visionState.metadata?.custom_fields;
     if (customFields && Object.keys(customFields).length > 0) {
       score += 2;

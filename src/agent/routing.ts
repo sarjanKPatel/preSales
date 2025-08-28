@@ -1,8 +1,82 @@
 import { TurnHandler, TurnConfig, TurnHandlerDependencies } from './handleTurn';
-import { ContextLoader } from './memory/context';
 import { LLMProviderManager } from './llm/provider';
-import { StreamResponse } from '../types';
+import { StreamResponse, AgentContext, VisionState, SessionData } from '../types';
 import { supabase } from '@/lib/supabase';
+import { ChatGPTMemoryManager } from './memory/chatGPTMemory';
+
+// Minimal context loader for vision data only (messages handled by ChatGPT memory)
+class SimpleContextLoader {
+  async loadVisionContext(visionId: string, sessionId: string, workspaceId: string, userId?: string): Promise<AgentContext> {
+    // Load vision data
+    const { data: visionData, error: visionError } = await supabase
+      .from('visions')
+      .select('*')
+      .eq('id', visionId)
+      .eq('workspace_id', workspaceId)
+      .single();
+
+    if (visionError || !visionData) {
+      throw new Error(`Vision not found: ${visionId}`);
+    }
+
+    // Get or create session
+    let { data: session } = await supabase
+      .from('chat_sessions')
+      .select('*')
+      .eq('id', sessionId)
+      .single();
+
+    if (!session) {
+      // Create session
+      const { data: newSession } = await supabase
+        .from('chat_sessions')
+        .insert({
+          id: sessionId,
+          workspace_id: workspaceId,
+          user_id: userId || visionData.created_by,
+          session_type: 'vision',
+          metadata: { vision_id: visionId }
+        })
+        .select()
+        .single();
+      
+      session = newSession;
+    }
+
+    const visionState: VisionState = visionData.vision_state || {};
+    
+    return {
+      messages: [], // Messages handled by ChatGPT memory system
+      session: {
+        id: session!.id,
+        type: session!.session_type as 'vision',
+        workspace_id: session!.workspace_id,
+        user_id: session!.user_id,
+        created_at: session!.created_at,
+        updated_at: session!.updated_at,
+        metadata: session!.metadata,
+      },
+      summary: undefined,
+      vision_state: {
+        ...visionState,
+        metadata: {
+          session_id: sessionId,
+          workspace_id: workspaceId,
+          user_id: userId || visionData.created_by,
+          status: visionData.status,
+          version: 1,
+          created_at: visionData.created_at,
+          updated_at: visionData.updated_at,
+          validation_score: visionData.completeness_score,
+          vision_id: visionId,
+          vision_title: visionData.title,
+          vision_category: visionData.category,
+          vision_impact: visionData.impact,
+        }
+      },
+    };
+  }
+}
 
 export interface AgentConfig {
   openaiApiKey?: string;
@@ -27,21 +101,16 @@ export class AgentRouter {
 
   private initializeTurnHandler(): TurnHandler {
 
-    // Use shared Supabase client from lib/supabase.ts
-    // No need to create a new instance
-
-    // Initialize Context Loader
-    const contextLoader = new ContextLoader({
-      maxMessages: this.config.maxMessages,
-      includeSummary: true,
-    });
-
     // Initialize LLM Provider
     const llmProvider = new LLMProviderManager();
 
+    // Initialize ChatGPT Memory Manager
+    const memoryManager = new ChatGPTMemoryManager();
+
     const dependencies: TurnHandlerDependencies = {
-      contextLoader,
       llmProvider,
+      memoryManager,
+      contextLoader: new SimpleContextLoader(), // Minimal context loader for vision data only
     };
 
     return new TurnHandler(dependencies);
@@ -187,6 +256,10 @@ export async function processVisionMessage(
 ): Promise<string | AsyncGenerator<StreamResponse>> {
   const agent = getGlobalAgent();
   
+  if (!options.workspaceId || !options.userId) {
+    throw new Error('workspaceId and userId are required for ChatGPT memory system');
+  }
+
   const config: TurnConfig = {
     sessionId,
     userMessage,

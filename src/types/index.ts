@@ -48,7 +48,7 @@ export interface VisionState {
   strategic_priorities?: string[];
   company_size?: number;
   
-  // Custom fields for additional user data
+  // Custom fields for additional business data that doesn't fit standard schema
   custom_fields?: Record<string, any>;
   
   // Nested metadata object

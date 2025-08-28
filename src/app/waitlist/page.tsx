@@ -21,8 +21,8 @@ export default function WaitlistPage() {
     }
     
     if (profile?.waitlist_status === 'approved') {
-      // User is approved, redirect to vision page
-      router.push('/vision');
+      // User is approved, redirect to workspace page
+      router.push('/workspace');
       return;
     }
   }, [user, profile, loading, router]);
@@ -88,7 +88,7 @@ export default function WaitlistPage() {
           <div className="space-y-3">
             {profile?.waitlist_status === 'approved' && (
               <Button
-                onClick={() => router.push('/vision')}
+                onClick={() => router.push('/workspace')}
                 variant="primary"
                 size="lg"
                 className="w-full bg-green-600 hover:bg-green-700"

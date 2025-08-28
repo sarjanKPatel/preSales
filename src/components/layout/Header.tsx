@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import Button from '@/components/Button';
-import WorkspaceSwitcher from '@/components/workspaces/WorkspaceSwitcher';
 import { 
   ChevronDown, 
   User, 
@@ -78,10 +77,6 @@ export default function Header() {
 
   const handleSignUp = () => {
     router.push('/signup');
-  };
-
-  const handleCreateWorkspace = () => {
-    router.push('/workspace-setup');
   };
 
   // Removed handleWorkspaceCreated as we no longer use modal
@@ -169,22 +164,6 @@ export default function Header() {
               </Link>
             </div>
             
-            {/* Desktop Workspace Switcher - hidden when space is limited */}
-            <div className="hidden lg:block">
-              {authLoading ? (
-                <div className="flex items-center gap-2 px-3 py-2 bg-gray-200 rounded-lg animate-pulse w-32 h-10">
-                  <div className="w-4 h-4 bg-gray-300 rounded" />
-                  <div className="flex-1 h-4 bg-gray-300 rounded" />
-                  <div className="w-4 h-4 bg-gray-300 rounded" />
-                </div>
-              ) : user ? (
-                <WorkspaceSwitcher 
-                  onCreateWorkspace={handleCreateWorkspace}
-                  compact={true}
-                  useFixedDropdown={true}
-                />
-              ) : null}
-            </div>
           </div>
 
           {/* Center: Desktop Navigation - only show Home for authenticated users */}
@@ -258,19 +237,6 @@ export default function Header() {
           <div className={`lg:hidden border-t border-white/20 py-4 glass transform transition-all duration-150 ease-out z-[60] ${
             isMobileMenuClosing ? 'animate-slide-up' : 'animate-slide-down'
           }`} ref={mobileMenuRef}>
-            {/* Mobile Workspace Switcher - shows when hidden from main header */}
-            {user && (
-              <div className="lg:hidden px-2 pb-4 border-b border-white/20 mb-4">
-                <WorkspaceSwitcher 
-                  onCreateWorkspace={() => {
-                    closeMobileMenu();
-                    handleCreateWorkspace();
-                  }}
-                  compact={false}
-                  useFixedDropdown={false}
-                />
-              </div>
-            )}
             
             {/* Navigation - only show Home for authenticated users */}
             {user && (

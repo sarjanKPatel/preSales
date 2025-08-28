@@ -6,7 +6,9 @@ import { GapDetector } from './gapDetector';
 export interface QuestionAnsweringInput {
   user_question: string;
   vision_state?: VisionState;
-  rag_context?: any[];
+  rag_context?: any[]; // Legacy support
+  memory_context?: string; // New ChatGPT memory context
+  context_sources?: string[]; // Source tracking from ChatGPT memory
   intent_details?: any;
 }
 
@@ -17,11 +19,11 @@ export interface QuestionAnsweringOutput {
 
 /**
  * QuestionAnswering Tool
- * Answers user questions based on vision context and RAG results
+ * Answers user questions using vision context and ChatGPT-style memory context
  */
 export class QuestionAnswering implements Tool<QuestionAnsweringInput, QuestionAnsweringOutput> {
   name = 'QuestionAnswering';
-  description = 'Answers user questions about the vision using available context and RAG';
+  description = 'Answers user questions about the vision using available context and ChatGPT memory';
   private gapDetector: GapDetector;
 
   constructor(private llmProvider: OpenAIProvider) {
@@ -30,37 +32,53 @@ export class QuestionAnswering implements Tool<QuestionAnsweringInput, QuestionA
 
   async execute(input: QuestionAnsweringInput): Promise<ToolResult<QuestionAnsweringOutput>> {
     try {
-      const { user_question, vision_state, rag_context } = input;
+      const { user_question, vision_state, memory_context, context_sources, rag_context } = input;
 
       console.log('[QuestionAnswering] Input:', {
         question: user_question,
         hasVisionState: !!vision_state,
         companyName: vision_state?.company_name,
+        hasMemoryContext: !!memory_context,
+        memoryContextLength: memory_context?.length || 0,
+        sourcesCount: context_sources?.length || 0,
+        // Legacy support
         ragResultsCount: rag_context?.length || 0,
         hasRAGContext: !!(rag_context && rag_context.length > 0)
       });
 
-      // Log RAG context details for debugging
+      // Log memory context details for debugging
+      if (memory_context) {
+        console.log('[QuestionAnswering] ChatGPT Memory context:');
+        console.log(`  Length: ${memory_context.length} characters`);
+        console.log(`  Sources: ${context_sources?.length || 0}`);
+        console.log(`  Preview: "${memory_context.substring(0, 200)}..."`);
+      }
+      
+      // Log RAG context details for debugging (legacy support)
       if (rag_context && rag_context.length > 0) {
-        console.log('[QuestionAnswering] RAG context details:');
+        console.log('[QuestionAnswering] Legacy RAG context details:');
         rag_context.forEach((result, index) => {
           console.log(`  [${index}] Similarity: ${result.similarity}, Content: "${result.content.substring(0, 100)}..."`);
+          console.log(`      Full Content: "${result.content}"`);
           console.log(`      Metadata:`, result.metadata);
         });
       } else {
         console.log('[QuestionAnswering] No RAG context available');
       }
 
-      console.log('[QuestionAnswering] Using LLM for dynamic answer...');
+      console.log('[QuestionAnswering] Using LLM with ChatGPT memory context...');
       
       // Always use LLM with context for dynamic responses
-      const prompt = this.buildAnswerPrompt(user_question, vision_state, rag_context);
+      const prompt = this.buildAnswerPrompt(user_question, vision_state, memory_context, rag_context);
       console.log('[QuestionAnswering] Sending prompt to LLM:', {
         promptLength: prompt.length,
         model: 'gpt-4o',
         temperature: 0.8, // Increased for more variation
         timestamp: new Date().toISOString()
       });
+      console.log('[QuestionAnswering] Full prompt being sent to LLM:');
+      console.log(prompt);
+      console.log('[QuestionAnswering] --- End of prompt ---');
 
       const response = await this.llmProvider.complete(prompt, {
         model: 'gpt-4o',
@@ -90,13 +108,21 @@ export class QuestionAnswering implements Tool<QuestionAnsweringInput, QuestionA
   }
 
 
-  private buildAnswerPrompt(question: string, vision_state?: VisionState, rag_context?: any[]): string {
+  private buildAnswerPrompt(
+    question: string, 
+    vision_state?: VisionState, 
+    memory_context?: string,
+    rag_context?: any[] // Legacy support
+  ): string {
     const visionSummary = vision_state ? this.summarizeVisionState(vision_state) : 'No vision data available.';
     
-    // Format RAG context with more structure
-    let ragSummary = '';
-    if (rag_context && rag_context.length > 0) {
-      ragSummary = rag_context.map((result, index) => {
+    // Use ChatGPT memory context if available, otherwise fall back to legacy RAG
+    let contextSummary = '';
+    if (memory_context) {
+      contextSummary = memory_context;
+    } else if (rag_context && rag_context.length > 0) {
+      // Legacy RAG context formatting
+      contextSummary = rag_context.map((result, index) => {
         const similarity = result.similarity ? ` (relevance: ${Math.round(result.similarity * 100)}%)` : '';
         return `[${index + 1}]${similarity}: ${result.content}`;
       }).join('\n\n');
@@ -121,25 +147,28 @@ export class QuestionAnswering implements Tool<QuestionAnsweringInput, QuestionA
     const randomVariation = variationPrompts[Math.floor(Math.random() * variationPrompts.length)];
     const timestamp = new Date().toISOString();
 
-    return `You are a friendly AI assistant. Answer the user's question using the available business information.
+    return `You are a friendly AI assistant. Answer the user's question using all available information sources.
 
 ## Current Vision State (PRIMARY SOURCE):
 ${visionSummary}
 
-${ragSummary ? `## Retrieved Business Context (SECONDARY SOURCE - from RAG):
-${ragSummary}\n` : ''}
+${contextSummary ? `## Memory Context (SECONDARY SOURCE - from ChatGPT Memory):
+${contextSummary}\n` : ''}
 
 ## User Question:
 "${question}"
 
 ## Instructions:
 1. ${randomStyle}
-2. **PRIORITY ORDER**: Look for answers in Current Vision State FIRST, then Retrieved Business Context from RAG
-3. If information is missing from both sources, acknowledge it naturally
-4. ${randomVariation}
-5. DO NOT ask any follow-up questions in your answer
-6. ONLY provide a direct answer to the question asked
-7. Timestamp for uniqueness: ${timestamp}
+2. **SEARCH ALL SOURCES**: Look for answers in Current Vision State AND Memory Context
+3. **Personal Information**: If the question asks for personal information (like names), check the Memory Context for previous conversations
+4. **Business Information**: Check both Current Vision State and Memory Context for business-related information
+5. **Conversation Memory**: The Memory Context contains multi-layered information from recent messages, important moments, and user preferences
+6. If information is missing from all sources, acknowledge it naturally
+7. ${randomVariation}
+8. DO NOT ask any follow-up questions in your answer
+9. ONLY provide a direct answer to the question asked
+10. Timestamp for uniqueness: ${timestamp}
 
 ## Response Format (JSON):
 {
@@ -163,7 +192,7 @@ Respond with ONLY the JSON object containing your answer.`;
     if (vision.market_size) parts.push(`Market Size: ${vision.market_size}`);
     if (vision.competitive_landscape) parts.push(`Competitive Landscape: ${vision.competitive_landscape}`);
     
-    // Include custom fields from either root level or metadata
+    // Include business custom fields from either root level or metadata
     const customFields = vision.custom_fields || vision.metadata?.custom_fields;
     if (customFields && Object.keys(customFields).length > 0) {
       Object.entries(customFields).forEach(([key, value]) => {

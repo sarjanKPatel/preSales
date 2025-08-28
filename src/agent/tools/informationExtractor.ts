@@ -89,9 +89,8 @@ export class InformationExtractor implements Tool<InformationExtractorInput, Inf
           });
         }
         
-        // Separate business data from personal data
+        // Only process business data - RAG handles personal data from conversation
         const { metadata, ...businessVisionState } = updatedVisionState;
-        const personalData = extractionResult.custom_fields || {};
         
         try {
           const persistResult = await this.visionPersistence.updateVisionAtomic({
@@ -124,25 +123,8 @@ export class InformationExtractor implements Tool<InformationExtractorInput, Inf
           console.error('[InformationExtractor] Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
         }
         
-        // Index personal data directly to RAG (not in vision_state)
-        if (Object.keys(personalData).length > 0) {
-          console.log('[InformationExtractor] Indexing personal data to RAG:', personalData);
-          try {
-            // Import VectorStore here to avoid circular dependencies
-            const { VectorStore } = await import('../rag/vectorStore');
-            const vectorStore = new VectorStore();
-            
-            await vectorStore.indexPersonalData(
-              input.persistence_config.vision_id,
-              personalData,
-              input.persistence_config.workspace_id
-            );
-            
-            console.log('[InformationExtractor] ✅ Personal data indexed to RAG');
-          } catch (error) {
-            console.error('[InformationExtractor] ❌ Failed to index personal data:', error);
-          }
-        }
+        // Personal data (like names) will be handled by RAG from conversation history
+        // No need to extract or index personal data here
       } else {
         console.warn('[InformationExtractor] ⚠️ Skipping persistence:', {
           hasPersistenceConfig: !!input.persistence_config,
@@ -188,12 +170,16 @@ Extract structured company vision information from the user message and return O
 4. If confidence < 0.5, set value to null.
 5. Do not invent facts. Only use data clearly stated or strongly implied.
 
-### Custom Fields Examples:
-- User names, contact info → "user_name", "contact_email"
-- Specific product names → "product_name"
+### Custom Fields Examples (BUSINESS DATA ONLY):
+- Specific product names → "product_name" 
 - Team size, funding → "team_size", "funding_status"
-- Geographic info → "location", "target_market"
-- Any other valuable info not in the standard schema
+- Geographic info → "target_market", "geographic_focus"  
+- Business-specific terms → "technology_stack", "business_model"
+- Any other BUSINESS-RELATED info not in the standard schema
+
+### Personal Data (DO NOT EXTRACT):
+- User names, contact info → RAG will handle from conversation
+- Personal preferences → RAG will handle from conversation
 
 ${recentContext}User message: "${userMessage}"
 
@@ -254,10 +240,10 @@ Current vision context: ${contextSummary}
 - "contextual": Inferred from conversation history or existing vision
 
 ### Special Instructions:
-- For user messages like "My name is John" → put in custom_fields as "user_name": "John"
-- For product/service names not fitting schema → put in custom_fields
-- For any personal or organizational details → check if they fit schema first, then custom_fields
-- ALWAYS check if information should go in custom_fields if it doesn't match standard schema
+- For user messages like "My name is John" → DO NOT extract (RAG handles personal data)
+- For product/service names not fitting schema → put in custom_fields (business data)
+- For business details not in schema → put in custom_fields (business data)
+- Focus ONLY on extracting business-related information
 
 Only extract information explicitly mentioned or clearly implied. Do not hallucinate data.`;
   }
@@ -355,4 +341,6 @@ Only extract information explicitly mentioned or clearly implied. Do not halluci
       ? confidences.reduce((sum, c) => sum + c, 0) / confidences.length 
       : 0;
   }
+
+  // isPersonalData method removed - RAG handles all personal data from conversation
 }

@@ -8,6 +8,8 @@ import { QuestionAnswering } from './QuestionAnswering';
 import { VisionFinalizer } from './VisionFinalizer';
 import { UIActionHandler } from './UIActionHandler';
 import { DynamicResponseGenerator } from './DynamicResponseGenerator';
+import { ValueExtractionAgent } from './ValueExtractionAgent';
+import { UpdateIntentParsingAgent } from './UpdateIntentParsingAgent';
 import { LLMProvider, OpenAIProvider, LLMProviderManager } from '../llm/provider';
 
 // Tool Registry Implementation
@@ -87,6 +89,10 @@ export function initializeTools(llmProvider?: LLMProvider): void {
     toolRegistry.register(new QuestionAnswering(openaiProvider));
     toolRegistry.register(new DynamicResponseGenerator(llmProviderManager));
     
+    // Specialized update parsing agents
+    toolRegistry.register(new ValueExtractionAgent(llmProviderManager));
+    toolRegistry.register(new UpdateIntentParsingAgent(llmProviderManager));
+    
     // Finalization and UI tools
     toolRegistry.register(new VisionFinalizer());
     toolRegistry.register(new UIActionHandler());
@@ -108,7 +114,9 @@ export {
   QuestionAnswering,
   VisionFinalizer,
   UIActionHandler,
-  DynamicResponseGenerator
+  DynamicResponseGenerator,
+  ValueExtractionAgent,
+  UpdateIntentParsingAgent
 };
 
 // Export types

@@ -51,6 +51,28 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Helper functions for localStorage
+  const saveWorkspaceToStorage = (workspace: Workspace | null) => {
+    try {
+      if (workspace) {
+        localStorage.setItem('selectedWorkspaceId', workspace.id);
+      } else {
+        localStorage.removeItem('selectedWorkspaceId');
+      }
+    } catch (error) {
+      console.warn('Failed to save workspace to localStorage:', error);
+    }
+  };
+
+  const getWorkspaceFromStorage = (): string | null => {
+    try {
+      return localStorage.getItem('selectedWorkspaceId');
+    } catch (error) {
+      console.warn('Failed to get workspace from localStorage:', error);
+      return null;
+    }
+  };
+
   const refreshWorkspaces = async () => {
     console.log('[WorkspaceContext] refreshWorkspaces called, user:', !!user);
     if (!user) {
@@ -91,18 +113,31 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           roleMapping[membership.workspace_id] = membership.role;
         });
         
-        setWorkspaces(workspaceData);
+        // Sort workspaces alphabetically by name
+        const sortedWorkspaceData = workspaceData.sort((a, b) => a.name.localeCompare(b.name));
+        setWorkspaces(sortedWorkspaceData);
         
         // Auto-select workspace logic
-        if (workspaceData.length > 0) {
+        if (sortedWorkspaceData.length > 0) {
           let selectedWorkspace = currentWorkspace;
           let selectedRole = currentUserRole;
           
-          // If no current workspace set, or current workspace not in list, select first one
-          if (!currentWorkspace || !workspaceData.find(w => w.id === currentWorkspace.id)) {
-            selectedWorkspace = workspaceData[0];
-            selectedRole = roleMapping[workspaceData[0].id];
+          // Try to get workspace from localStorage first
+          const savedWorkspaceId = getWorkspaceFromStorage();
+          const savedWorkspace = savedWorkspaceId ? sortedWorkspaceData.find(w => w.id === savedWorkspaceId) : null;
+          
+          if (savedWorkspace) {
+            // Use saved workspace if it exists and user has access
+            selectedWorkspace = savedWorkspace;
+            selectedRole = roleMapping[savedWorkspace.id];
             setCurrentWorkspace(selectedWorkspace);
+          } else if (!currentWorkspace || !sortedWorkspaceData.find(w => w.id === currentWorkspace.id)) {
+            // If no saved workspace or current workspace not in list, select first one (alphabetically first)
+            selectedWorkspace = sortedWorkspaceData[0];
+            selectedRole = roleMapping[sortedWorkspaceData[0].id];
+            setCurrentWorkspace(selectedWorkspace);
+            // Save the default selection
+            saveWorkspaceToStorage(selectedWorkspace);
           } else {
             // Update role for current workspace
             selectedRole = roleMapping[currentWorkspace.id] || null;
@@ -112,6 +147,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         } else {
           setCurrentWorkspace(null);
           setCurrentUserRole(null);
+          saveWorkspaceToStorage(null);
         }
       }
     } catch (err: any) {
@@ -324,7 +360,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const workspace = workspaces.find(w => w.id === workspaceId);
     if (workspace) {
       setCurrentWorkspace(workspace);
+      saveWorkspaceToStorage(workspace);
     }
+  };
+
+  // Custom setCurrentWorkspace wrapper that saves to localStorage
+  const setCurrentWorkspaceWithPersistence = (workspace: Workspace) => {
+    setCurrentWorkspace(workspace);
+    saveWorkspaceToStorage(workspace);
   };
 
   const value: WorkspaceContextType = {
@@ -334,7 +377,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     loading: combinedLoading,
     workspaceLoading: loading,
     error,
-    setCurrentWorkspace,
+    setCurrentWorkspace: setCurrentWorkspaceWithPersistence,
     setCurrentWorkspaceById,
     refreshWorkspaces,
     createWorkspace,

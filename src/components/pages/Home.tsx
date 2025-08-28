@@ -28,7 +28,7 @@ export default function HomePage() {
         router.push('/waitlist');
       } else {
         // If approved, go to workspace dashboard
-        router.push('/vision');
+        router.push('/workspace');
       }
     } else {
       // If not logged in, go to signup
