@@ -11,6 +11,7 @@ import {
   Check
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import ActionButtons, { UIActions, ActionButton } from './ActionButtons';
 
 export interface MessageProps {
   id: string;
@@ -18,9 +19,11 @@ export interface MessageProps {
   role: 'user' | 'assistant';
   timestamp: string;
   isTyping?: boolean;
+  ui_actions?: UIActions | null;
   onRegenerate?: () => void;
   onCopy?: () => void;
   onFeedback?: (type: 'up' | 'down') => void;
+  onAction?: (actionButton: ActionButton) => void;
 }
 
 export default function Message({
@@ -29,9 +32,11 @@ export default function Message({
   role,
   timestamp,
   isTyping = false,
+  ui_actions,
   onRegenerate,
   onCopy,
-  onFeedback
+  onFeedback,
+  onAction
 }: MessageProps) {
   const [copied, setCopied] = useState(false);
   const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
@@ -92,6 +97,15 @@ export default function Message({
             )}>
               {content}
             </p>
+          )}
+          
+          {/* Action Buttons */}
+          {role === 'assistant' && ui_actions && !isTyping && onAction && (
+            <ActionButtons
+              ui_actions={ui_actions}
+              onAction={onAction}
+              className="mt-2"
+            />
           )}
         </div>
 

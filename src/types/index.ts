@@ -162,10 +162,21 @@ export interface AgentRun {
 }
 
 export interface StreamResponse {
-  type: 'token' | 'metadata' | 'error' | 'done';
+  type: 'token' | 'metadata' | 'error' | 'done' | 'ui_actions';
   content?: string;
   metadata?: Record<string, any>;
   error?: string;
+  ui_actions?: {
+    type: 'buttons';
+    context?: string; // Context about when to show buttons (e.g., "after_question")
+    actions: Array<{
+      id: string;
+      label: string;
+      action_type: 'skip' | 'approve' | 'add_more';
+      field_name?: string;
+      variant?: 'primary' | 'secondary' | 'outline';
+    }>;
+  };
 }
 
 export interface ToolResult<T = any> {

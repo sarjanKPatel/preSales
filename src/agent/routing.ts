@@ -7,17 +7,36 @@ import { ChatGPTMemoryManager } from './memory/chatGPTMemory';
 // Minimal context loader for vision data only (messages handled by ChatGPT memory)
 class SimpleContextLoader {
   async loadVisionContext(visionId: string, sessionId: string, workspaceId: string, userId?: string): Promise<AgentContext> {
-    // Load vision data
-    const { data: visionData, error: visionError } = await supabase
-      .from('visions')
-      .select('*')
-      .eq('id', visionId)
-      .eq('workspace_id', workspaceId)
-      .single();
+    // Load vision data using RPC to ensure fresh data (avoid stale cache issues)
+    let visionData;
+    console.log('[SimpleContextLoader] Loading fresh vision data for:', visionId);
+    
+    const { data: rpcData, error: rpcError } = await supabase
+      .rpc('get_vision_for_update', {
+        p_vision_id: visionId,
+        p_workspace_id: workspaceId
+      });
 
-    if (visionError || !visionData) {
-      throw new Error(`Vision not found: ${visionId}`);
+    if (rpcError || !rpcData) {
+      // Fallback to direct query with cache busting
+      console.warn('[SimpleContextLoader] RPC failed, using direct query:', rpcError?.message);
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('visions')
+        .select('*')
+        .eq('id', visionId)
+        .eq('workspace_id', workspaceId)
+        .single();
+      
+      if (fallbackError || !fallbackData) {
+        throw new Error(`Vision not found: ${visionId}`);
+      }
+      
+      visionData = fallbackData;
+    } else {
+      visionData = rpcData;
     }
+    
+    console.log('[SimpleContextLoader] Loaded vision state with skipped_fields:', visionData.vision_state?.metadata?.skipped_fields);
 
     // Get or create session
     let { data: session } = await supabase

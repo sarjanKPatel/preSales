@@ -10,7 +10,7 @@ import {
   Users, 
   Crown, 
   Shield, 
-  Eye,
+  FileText,
   Trash2,
   LogOut,
   AlertCircle,
@@ -139,9 +139,9 @@ export default function SettingsWorkspace() {
       case 'member':
         return <Shield className="w-4 h-4 text-blue-500" />;
       case 'viewer':
-        return <Eye className="w-4 h-4 text-gray-500" />;
+        return <FileText className="w-4 h-4 text-gray-500" />;
       default:
-        return <Eye className="w-4 h-4 text-gray-500" />;
+        return <FileText className="w-4 h-4 text-gray-500" />;
     }
   };
 

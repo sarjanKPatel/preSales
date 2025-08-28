@@ -74,7 +74,7 @@ const Button: React.FC<ButtonProps> = ({
           />
         </svg>
       ) : icon && (
-        <span className="mr-2">
+        <span className={children ? "mr-2" : ""}>
           {icon}
         </span>
       )}

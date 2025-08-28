@@ -69,6 +69,7 @@ function ChatPageContent() {
           <Layout maxWidth="full" padding={false}>
             <div className="h-[calc(100vh-4rem)] w-full">
               <VisionChatLayout
+                key={`vision-chat-${visionId || 'default'}`}
                 className="h-full"
                 visionId={visionId}
               />
