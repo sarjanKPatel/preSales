@@ -78,27 +78,31 @@ const VisionCard = memo(function VisionCard({ vision, onChat, onView, onEdit, on
         <div className="flex items-start justify-between">
           <div className="flex-1">
             {isEditing ? (
-              <div className="flex items-center gap-2 mb-2">
+              <div className="mb-2">
                 <input
                   type="text"
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
-                  className="flex-1 px-2 py-1 border border-gray-300 rounded text-lg font-semibold"
+                  className="w-full px-2 py-1 border border-gray-300 rounded text-lg font-semibold mb-2"
                   autoFocus
                   onClick={(e) => e.stopPropagation()}
                 />
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  icon={<Check className="w-4 h-4" />}
-                  onClick={handleEditSave}
-                />
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  icon={<X className="w-4 h-4" />}
-                  onClick={handleEditCancel}
-                />
+                <div className="flex items-center justify-around gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    icon={<Check className="w-4 h-4" />}
+                    onClick={handleEditSave}
+                    className="flex-1"
+                  />
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    icon={<X className="w-4 h-4" />}
+                    onClick={handleEditCancel}
+                    className="flex-1"
+                  />
+                </div>
               </div>
             ) : (
               <div className="flex items-center justify-between mb-2">

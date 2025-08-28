@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   try {
     console.log('[API] POST request received');
     const body = await request.json();
-    const { sessionId, userMessage, userId, workspaceId, visionId } = body;
+    const { sessionId, userMessage, userId, workspaceId, visionId, uiAction } = body;
 
     console.log('[API] Request body parsed, received request:', {
       sessionId: sessionId ? `${sessionId.substring(0, 8)}...` : 'undefined',
@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
       userId: userId ? `${userId.substring(0, 8)}...` : 'undefined',
       workspaceId: workspaceId ? `${workspaceId.substring(0, 8)}...` : 'undefined',
       visionId: visionId ? `${visionId.substring(0, 8)}...` : 'undefined',
+      hasUIAction: !!uiAction,
       bodyKeys: Object.keys(body)
     });
 
@@ -59,30 +60,44 @@ export async function POST(request: NextRequest) {
       userId,
       workspaceId,
       visionId,
+      uiAction: uiAction || undefined,
     });
 
     // Collect the streamed response
     console.log('[API] Collecting streamed response...');
     let response = '';
+    let ui_actions: any = null;
     let chunkCount = 0;
+    
     for await (const chunk of streamGenerator) {
       chunkCount++;
       console.log(`[API] Processing chunk ${chunkCount}:`, {
         type: chunk.type,
         hasContent: !!chunk.content,
-        contentLength: chunk.content?.length || 0
+        contentLength: chunk.content?.length || 0,
+        hasUIActions: !!chunk.ui_actions
       });
       
       if (chunk.type === 'token' && chunk.content) {
         response += chunk.content;
+      } else if (chunk.type === 'ui_actions' && chunk.ui_actions) {
+        ui_actions = chunk.ui_actions;
+        console.log('[API] 🔴 UI actions received:', JSON.stringify(ui_actions, null, 2));
       } else if (chunk.type === 'error') {
         console.error('[API] Agent error chunk received:', chunk.error);
         throw new Error(chunk.error || 'Agent processing failed');
       }
     }
 
-    console.log('[API] Agent processing completed, response length:', response.length);
-    return NextResponse.json({ response });
+    console.log('[API] Agent processing completed:', {
+      responseLength: response.length,
+      hasUIActions: !!ui_actions
+    });
+    
+    return NextResponse.json({ 
+      response,
+      ui_actions: ui_actions || null
+    });
   } catch (error) {
     console.error('[API] Agent processing failed:', error);
     return NextResponse.json(

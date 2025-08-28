@@ -5,7 +5,6 @@ import { VisionStateManager } from './visionState';
 import { InformationExtractor } from './informationExtractor';
 import { IntentClassifier } from './IntentClassifier';
 import { QuestionAnswering } from './QuestionAnswering';
-import { VisionFinalizer } from './VisionFinalizer';
 import { UIActionHandler } from './UIActionHandler';
 import { DynamicResponseGenerator } from './DynamicResponseGenerator';
 import { ValueExtractionAgent } from './ValueExtractionAgent';
@@ -93,8 +92,7 @@ export function initializeTools(llmProvider?: LLMProvider): void {
     toolRegistry.register(new ValueExtractionAgent(llmProviderManager));
     toolRegistry.register(new UpdateIntentParsingAgent(llmProviderManager));
     
-    // Finalization and UI tools
-    toolRegistry.register(new VisionFinalizer());
+    // UI tools
     toolRegistry.register(new UIActionHandler());
   } catch (error) {
     console.error('[Tools] Failed to initialize tools:', error);
@@ -112,7 +110,6 @@ export {
   InformationExtractor, 
   IntentClassifier,
   QuestionAnswering,
-  VisionFinalizer,
   UIActionHandler,
   DynamicResponseGenerator,
   ValueExtractionAgent,

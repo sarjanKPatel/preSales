@@ -106,14 +106,21 @@ export function useAgentResponse(options: UseAgentResponseOptions = {}) {
 
       const responseData = await response.json();
       console.log('[useAgentResponse] API response received:', responseData);
-      const { response: agentResponse } = responseData;
+      const { response: agentResponse, ui_actions } = responseData;
+      
+      if (ui_actions) {
+        console.log('[useAgentResponse] 🔴 UI actions detected:', JSON.stringify(ui_actions, null, 2));
+      } else {
+        console.log('[useAgentResponse] ⚪ No UI actions in response');
+      }
 
-      // Store agent response in database
+      // Store agent response in database with UI actions
       console.log('[useAgentResponse] Creating assistant message in database...');
       const assistantMessage = await db.createChatMessage(
         options.sessionId,
         'assistant',
-        agentResponse
+        agentResponse,
+        ui_actions ? { ui_actions } : undefined
       );
       console.log('[useAgentResponse] Assistant message created:', assistantMessage.id);
 
@@ -122,6 +129,7 @@ export function useAgentResponse(options: UseAgentResponseOptions = {}) {
         content: agentResponse,
         role: 'assistant' as const,
         timestamp: assistantMessage.created_at,
+        ui_actions: ui_actions || null,
       };
 
       console.log('[useAgentResponse] Adding assistant message to UI:', responseMessage);
@@ -150,9 +158,102 @@ export function useAgentResponse(options: UseAgentResponseOptions = {}) {
     }
   }, [user, currentWorkspace, options.sessionId, options.visionId, options.onMessage]);
 
+  // Handle UI action clicks
+  const handleUIAction = useCallback(async (actionButton: any) => {
+    console.log('[useAgentResponse] UI action triggered:', actionButton);
+    
+    if (!user || !currentWorkspace || !options.sessionId) {
+      console.error('[useAgentResponse] Missing required parameters for UI action');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Create user message for the action
+      console.log('[useAgentResponse] Creating user action message...');
+      const userMessage = await db.createChatMessage(
+        options.sessionId,
+        'user',
+        `[UI Action: ${actionButton.action_type}]`
+      );
+
+      const userMessageForUI = {
+        id: userMessage.id,
+        content: `[UI Action: ${actionButton.action_type}]`,
+        role: 'user' as const,
+        timestamp: userMessage.created_at,
+      };
+
+      if (options.onMessage) {
+        options.onMessage(userMessageForUI);
+      }
+
+      // Send action to agent
+      console.log('[useAgentResponse] Sending UI action to agent API...');
+      const response = await fetch('/api/agent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sessionId: options.sessionId,
+          userMessage: actionButton.label, // Send the button label as the message
+          workspaceId: currentWorkspace.id,
+          userId: user.id,
+          visionId: options.visionId,
+          uiAction: {
+            type: actionButton.action_type,
+            fieldName: actionButton.field_name,
+            metadata: { buttonId: actionButton.id }
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.statusText}`);
+      }
+
+      const responseData = await response.json();
+      const { response: agentResponse, ui_actions } = responseData;
+
+      // Store agent response with UI actions
+      const assistantMessage = await db.createChatMessage(
+        options.sessionId,
+        'assistant',
+        agentResponse,
+        ui_actions ? { ui_actions } : undefined
+      );
+
+      const responseMessage = {
+        id: assistantMessage.id,
+        content: agentResponse,
+        role: 'assistant' as const,
+        timestamp: assistantMessage.created_at,
+        ui_actions: ui_actions || null,
+      };
+
+      if (options.onMessage) {
+        options.onMessage(responseMessage);
+      }
+
+      return responseMessage;
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'UI action failed';
+      console.error('[useAgentResponse] UI action failed:', err);
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [user, currentWorkspace, options.sessionId, options.visionId, options.onMessage]);
+
   return {
     loading,
     error,
     sendMessage,
+    handleUIAction,
   };
 }

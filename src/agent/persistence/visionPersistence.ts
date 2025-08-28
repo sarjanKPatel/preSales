@@ -98,9 +98,14 @@ export class VisionPersistence {
         ...businessMetadata
       } = metadata;
       
-      // Keep all business-related metadata in the vision state
+      // Merge new business metadata with existing metadata from database
       if (Object.keys(businessMetadata).length > 0) {
-        cleanVisionState.metadata = businessMetadata;
+        const existingMetadata = currentVision.vision_state?.metadata || {};
+        cleanVisionState.metadata = {
+          ...existingMetadata,
+          ...businessMetadata
+        };
+        
       }
       
       // Step 5: Atomic update using RPC for transaction safety

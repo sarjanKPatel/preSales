@@ -240,27 +240,36 @@ export class GapDetector implements Tool<GapDetectorInput, GapDetectorOutput> {
     const questions: SmartQuestion[] = [];
     const industry = visionState.industry?.toLowerCase() || '';
     const companySize = visionState.company_size || 0;
+    
+    // Get skipped fields to avoid asking about them
+    const skippedFields = visionState.metadata?.skipped_fields || [];
 
-    // Priority 1: Critical gaps
+    // Priority 1: Critical gaps (but skip already skipped fields)
     criticalGaps.forEach(gap => {
-      const question = this.getQuestionForField(gap, visionState, 'high');
-      if (question) questions.push(question);
+      const baseField = gap.replace('_weak', ''); // Remove _weak suffix for comparison
+      if (!skippedFields.includes(baseField)) {
+        const question = this.getQuestionForField(gap, visionState, 'high');
+        if (question) questions.push(question);
+      }
     });
 
-    // Priority 2: Industry-specific questions
+    // Priority 2: Industry-specific questions (filtered by skipped fields)
     if (industry) {
-      const industryQuestions = this.getIndustrySpecificQuestions(industry, visionState);
+      const industryQuestions = this.getIndustrySpecificQuestions(industry, visionState)
+        .filter(q => !q.target_fields.some(field => skippedFields.includes(field)));
       questions.push(...industryQuestions);
     }
 
-    // Priority 3: Company size-based questions
+    // Priority 3: Company size-based questions (filtered by skipped fields)
     if (companySize > 0) {
-      const sizeQuestions = this.getSizeSpecificQuestions(companySize, visionState);
+      const sizeQuestions = this.getSizeSpecificQuestions(companySize, visionState)
+        .filter(q => !q.target_fields.some(field => skippedFields.includes(field)));
       questions.push(...sizeQuestions);
     }
 
-    // Priority 4: Context-driven questions
-    const contextQuestions = this.getContextDrivenQuestions(context, visionState);
+    // Priority 4: Context-driven questions (filtered by skipped fields)
+    const contextQuestions = this.getContextDrivenQuestions(context, visionState)
+      .filter(q => !q.target_fields.some(field => skippedFields.includes(field)));
     questions.push(...contextQuestions);
 
     return questions;

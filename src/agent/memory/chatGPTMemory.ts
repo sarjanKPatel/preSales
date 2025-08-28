@@ -328,7 +328,7 @@ export class ChatGPTMemoryManager {
       const chunkTokens = this.estimateTokenCount(result.content);
       if (tokenCount + chunkTokens > tokenBudget) break;
 
-      context += `[Retrieved]: ${result.content}\n`;
+      context += `${result.content}\n`;
       sources.push(result.id);
       tokenCount += chunkTokens;
     }

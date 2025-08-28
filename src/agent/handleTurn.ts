@@ -15,7 +15,7 @@ export interface TurnConfig {
   maxRetries?: number;
   budgetTokens?: number;
   uiAction?: {
-    type: 'skip' | 'approve' | 'finalize' | 'add_more' | 'custom';
+    type: 'skip' | 'approve' | 'add_more' | 'custom';
     fieldName?: string;
     metadata?: any;
   };
@@ -190,6 +190,15 @@ export class TurnHandler {
         if (result.data.followup_question) {
           assistantResponse += `\n\n${result.data.followup_question}`;
           yield { type: 'token', content: `\n\n${result.data.followup_question}` };
+          
+          // Generate UI buttons for the follow-up question
+          const fieldName = this.extractFieldNameFromQuestion(result.data.followup_question);
+          if (fieldName) {
+            console.log('[HandleQuestion] Generating UI button for followup field:', fieldName);
+            yield this.generateUIButtons('after_question', fieldName);
+          } else {
+            console.warn('[HandleQuestion] No field name found for followup question:', result.data.followup_question);
+          }
         }
       } else {
         assistantResponse = JSON.stringify(result.data);
@@ -292,6 +301,18 @@ export class TurnHandler {
           if (dynamicResult.data.shouldAskFollowUp && dynamicResult.data.followUpQuestion) {
             assistantResponse += `\n\n${dynamicResult.data.followUpQuestion}`;
             yield { type: 'token', content: `\n\n${dynamicResult.data.followUpQuestion}` };
+            
+            // Add skip button for follow-up question
+            const fieldName = this.extractFieldNameFromQuestion(dynamicResult.data.followUpQuestion);
+            if (fieldName) {
+              console.log('[HandleInformation] Generating UI button for followup field:', fieldName);
+              yield this.generateUIButtons('after_question', fieldName);
+            } else {
+              console.warn('[HandleInformation] No field name found for followup question:', dynamicResult.data.followUpQuestion);
+            }
+          } else {
+            // Add "add more details" button when no follow-up is generated
+            yield this.generateUIButtons('after_information');
           }
         } else {
           // Fallback response
@@ -378,11 +399,6 @@ export class TurnHandler {
         return;
         
         
-      case 'finalize':
-        assistantResponse = 'Vision finalization will be implemented in a future phase.';
-        yield { type: 'token', content: assistantResponse };
-        break;
-        
       case 'export':
         assistantResponse = 'Export functionality will be available soon.';
         yield { type: 'token', content: assistantResponse };
@@ -451,7 +467,14 @@ export class TurnHandler {
     }
 
     // Load vision context for UI actions
-    const context = await this.loadContext(config);
+    let context = await this.loadContext(config);
+    
+    console.log('[HandleTurn] About to call UIActionHandler with vision state:', {
+      actionType: config.uiAction.type,
+      fieldName: config.uiAction.fieldName,
+      currentSkippedFields: context.vision_state?.metadata?.skipped_fields,
+      hasMetadata: !!context.vision_state?.metadata
+    });
     
     const result = await uiHandler.execute({
       action: config.uiAction,
@@ -461,8 +484,97 @@ export class TurnHandler {
 
     let assistantResponse = '';
     if (result.success && result.data) {
-      assistantResponse = result.data.message || 'UI action completed.';
+      assistantResponse = result.data.response || 'UI action completed.';
       yield { type: 'token', content: assistantResponse };
+
+      // Persist state updates to database if they exist
+      if (result.data.state_updates && config.visionId) {
+        console.log('[HandleTurn] UI Action has state updates, persisting to database...', {
+          visionId: config.visionId,
+          actionType: config.uiAction.type,
+          hasStateUpdates: !!result.data.state_updates
+        });
+
+        try {
+          const { VisionPersistence } = await import('./persistence/visionPersistence');
+          const visionPersistence = new VisionPersistence();
+
+          // Properly merge current vision state with updates (including nested metadata)
+          const updatedVisionState = {
+            ...context.vision_state,
+            ...result.data.state_updates,
+            metadata: {
+              ...context.vision_state?.metadata,
+              ...result.data.state_updates?.metadata
+            }
+          };
+
+          const persistResult = await visionPersistence.updateVisionAtomic({
+            visionId: config.visionId,
+            visionState: updatedVisionState,
+            workspaceId: config.workspaceId,
+            userId: config.userId,
+          });
+
+          if (persistResult.success) {
+            console.log(`[HandleTurn] ✅ UI Action state updates persisted successfully - Completeness: ${persistResult.completenessScore}%`);
+            
+            // CRITICAL FIX: Refresh context after database update to prevent stale state
+            console.log('[HandleTurn] Refreshing context after UI action database update...');
+            context = await this.loadContext(config);
+            console.log('[HandleTurn] Context refreshed with updated skipped fields:', context.vision_state?.metadata?.skipped_fields);
+            
+            // If the UIActionHandler returned UI actions, regenerate them with fresh context to ensure
+            // they don't ask questions about newly skipped fields
+            if (result.data.ui_actions) {
+              console.log('[HandleTurn] Regenerating UI actions with fresh context to avoid stale state questions...');
+              const gapDetector = toolRegistry.get('GapDetector');
+              if (gapDetector) {
+                const gapResult = await gapDetector.execute({
+                  vision_state: context.vision_state, // Use fresh context
+                  context: []
+                });
+                
+                if (gapResult.success && gapResult.data?.next_questions && gapResult.data.next_questions.length > 0) {
+                  const nextQuestion = gapResult.data.next_questions[0];
+                  const smartQuestions = gapResult.data.smart_questions;
+                  
+                  if (smartQuestions && smartQuestions.length > 0) {
+                    const targetField = smartQuestions[0].target_fields?.[0];
+                    if (targetField) {
+                      // Update the assistant response with fresh question
+                      const baseResponse = result.data.response.split('\n\n')[0];
+                      assistantResponse = baseResponse + `\n\n${nextQuestion}`;
+                      
+                      // Update UI actions with fresh field
+                      result.data.ui_actions = {
+                        type: 'buttons',
+                        context: 'after_question',
+                        actions: [{
+                          id: `skip_${targetField}_${Date.now()}`,
+                          label: 'Skip this question',
+                          action_type: 'skip',
+                          field_name: targetField,
+                          variant: 'outline'
+                        }]
+                      };
+                      
+                      console.log('[HandleTurn] Updated assistant response and UI actions with fresh target field:', targetField);
+                      console.log('[HandleTurn] Fresh assistant response:', assistantResponse);
+                    }
+                  }
+                }
+              }
+            }
+          } else {
+            console.error('[HandleTurn] ❌ Failed to persist UI action state updates:', persistResult.error);
+          }
+        } catch (persistError) {
+          console.error('[HandleTurn] ❌ UI Action persistence exception:', persistError);
+        }
+      } else {
+        console.log('[HandleTurn] No state updates to persist for UI action:', config.uiAction.type);
+      }
     } else {
       assistantResponse = 'UI action failed.';
       yield { type: 'token', content: assistantResponse };
@@ -477,6 +589,15 @@ export class TurnHandler {
       'assistant',
       turnNumber
     );
+    
+    // Yield UI actions if the UIActionHandler provided them (may have been updated with fresh context)
+    if (result.success && result.data && result.data.ui_actions) {
+      console.log('[HandleTurn] UI Action returned UI actions, yielding:', result.data.ui_actions);
+      yield {
+        type: 'ui_actions',
+        ui_actions: result.data.ui_actions
+      };
+    }
     
     yield { type: 'done' };
   }
@@ -655,16 +776,60 @@ export class TurnHandler {
     if (gapResult.success && gapResult.data?.gaps_found) {
       // Use gap detector questions
       if (gapResult.data.next_questions && gapResult.data.next_questions.length > 0) {
-        const questionsText = gapResult.data.next_questions.map((q: string, i: number) => `${i + 1}. ${q}`).join('\n');
-        gapResponse = `I need some more information:\n\n${questionsText}`;
+        // Take the first question for simplicity
+        const firstQuestion = gapResult.data.next_questions[0];
+        gapResponse = `I need some more information:\n\n${firstQuestion}`;
         yield { type: 'token', content: gapResponse };
+        
+        // Add skip button for the question - use smart_questions data if available from GapDetector
+        let fieldName: string | undefined;
+        if (gapResult.data && gapResult.data.smart_questions) {
+          // Try to find the smart question that matches this question text
+          const smartQuestion = gapResult.data.smart_questions.find(sq => sq.question === firstQuestion);
+          if (smartQuestion && smartQuestion.target_fields && smartQuestion.target_fields.length > 0) {
+            fieldName = smartQuestion.target_fields[0];
+            console.log('[CheckGaps] Using smart question target field:', fieldName);
+          }
+        }
+        
+        // Fallback to pattern matching
+        if (!fieldName) {
+          fieldName = this.extractFieldNameFromQuestion(firstQuestion);
+          console.log('[CheckGaps] Using pattern matching fallback, extracted field:', fieldName);
+        }
+        
+        console.log('[TurnHandler] Button generation debug:', {
+          question: firstQuestion,
+          extractedFieldName: fieldName,
+          willGenerateButton: !!fieldName
+        });
+        if (fieldName) {
+          const buttonResponse = this.generateUIButtons('after_question', fieldName);
+          console.log('[TurnHandler] Generated button response:', buttonResponse);
+          yield buttonResponse;
+        } else {
+          console.warn('[CheckGaps] No field name found for question:', firstQuestion);
+        }
       } else {
         gapResponse = 'Thank you for that information!';
         yield { type: 'token', content: gapResponse };
       }
     } else {
-      // No gaps found - check if ready to finalize
-      yield* this.checkReadyToFinalize(visionState, config, turnNumber);
+      // No gaps found - vision is complete
+      const assistantResponse = "Great! Your vision is looking comprehensive. Is there anything specific you'd like to add or refine?";
+      yield { type: 'token', content: assistantResponse };
+      
+      // Store response in memory
+      await this.memoryManager.storeMessage(
+        assistantResponse,
+        config.sessionId,
+        config.userId,
+        config.workspaceId,
+        'assistant',
+        turnNumber
+      );
+      
+      yield { type: 'done' };
       return;
     }
     
@@ -683,35 +848,6 @@ export class TurnHandler {
     yield { type: 'done' };
   }
 
-  // Helper: Check if ready to finalize
-  private async *checkReadyToFinalize(
-    visionState: any, 
-    config: TurnConfig, 
-    turnNumber: number
-  ): AsyncGenerator<StreamResponse> {
-    const completeness = visionState.metadata?.validation_score || 0;
-    let response = '';
-    
-    if (completeness >= 80) {
-      response = `Great! Your vision is ${completeness}% complete. Would you like to finalize it?`;
-      yield { type: 'token', content: response };
-    } else {
-      response = 'Thank you for that information. Your vision is taking shape!';
-      yield { type: 'token', content: response };
-    }
-    
-    // Store response in memory
-    await this.memoryManager.storeMessage(
-      response,
-      config.sessionId,
-      config.userId,
-      config.workspaceId,
-      'assistant',
-      turnNumber
-    );
-    
-    yield { type: 'done' };
-  }
 
 
   // Phase 1 Command Handlers
@@ -786,11 +922,36 @@ export class TurnHandler {
             assistantResponse = dynamicResult.data.response;
             yield { type: 'token', content: dynamicResult.data.response };
             
-            // Add gap-specific questions
+            // Add gap-specific questions with skip button
             if (gapResult.data.next_questions && gapResult.data.next_questions.length > 0) {
-              const questionsText = `\n\n${gapResult.data.next_questions[0]}`;
+              const firstQuestion = gapResult.data.next_questions[0];
+              const questionsText = `\n\n${firstQuestion}`;
               assistantResponse += questionsText;
               yield { type: 'token', content: questionsText };
+              
+              // Add skip button for the question - use smart_questions data for accurate field mapping
+              let fieldName: string | undefined;
+              if (gapResult.data.smart_questions && gapResult.data.smart_questions.length > 0) {
+                // Use the target_fields from smart_questions for accurate mapping
+                const smartQuestion = gapResult.data.smart_questions.find(sq => sq.question === firstQuestion);
+                if (smartQuestion && smartQuestion.target_fields && smartQuestion.target_fields.length > 0) {
+                  fieldName = smartQuestion.target_fields[0]; // Use the first target field
+                  console.log('[HandleFocusOnVision] Using smart question target field:', fieldName);
+                }
+              }
+              
+              // Fallback to pattern matching if smart question data not available
+              if (!fieldName) {
+                fieldName = this.extractFieldNameFromQuestion(firstQuestion);
+                console.log('[HandleFocusOnVision] Using pattern matching fallback, extracted field:', fieldName);
+              }
+              
+              if (fieldName) {
+                console.log('[HandleFocusOnVision] Generating UI button for field:', fieldName);
+                yield this.generateUIButtons('after_question', fieldName);
+              } else {
+                console.warn('[HandleFocusOnVision] No field name found for question:', firstQuestion);
+              }
             }
           } else {
             // Simple fallback if dynamic generation fails
@@ -803,10 +964,10 @@ export class TurnHandler {
           yield { type: 'token', content: assistantResponse };
         }
       } else {
-        // No gaps found - check if ready to finalize
+        // No gaps found - vision looks comprehensive
         const completeness = context.vision_state?.metadata?.validation_score || 0;
         if (completeness >= 80) {
-          assistantResponse = `Excellent! Your vision for ${context.vision_state?.company_name || 'your company'} is ${completeness}% complete. Would you like to finalize it or add any final touches?`;
+          assistantResponse = `Excellent! Your vision for ${context.vision_state?.company_name || 'your company'} is ${completeness}% complete. Is there anything specific you'd like to add or refine?`;
         } else {
           assistantResponse = `Your vision is coming together well! It's ${completeness}% complete. Let me ask a few more questions to strengthen it further. What's your primary success metric for this vision?`;
         }
@@ -1066,12 +1227,7 @@ export class TurnHandler {
     yield { type: 'done' };
   }
 
-  // TODO: Implement handleFinalize in Phase 4
-  // Should properly implement VisionFinalizer tool with:
-  // - Vision validation and completeness checks
-  // - Executive summary generation  
-  // - Status update to 'finalized'
-  // - Final snapshot creation
+
 
   // Helper methods for update_vision command
   
@@ -1317,7 +1473,7 @@ export class TurnHandler {
       conversation_history: conversationHistory,
       vision_context: visionContext,
       ui_context: config.uiAction ? {
-        buttons_shown: ['skip', 'approve', 'finalize'],
+        buttons_shown: ['skip', 'approve'],
         awaiting_response: true
       } : undefined
     };
@@ -1346,6 +1502,94 @@ export class TurnHandler {
     const turnNumber = current + 1;
     this.conversationTurnCounter.set(conversationId, turnNumber);
     return turnNumber;
+  }
+
+  // Helper: Generate UI buttons for questions
+  private generateUIButtons(
+    context: 'after_question' | 'after_information',
+    fieldName?: string
+  ): StreamResponse {
+    const actions: Array<{
+      id: string;
+      label: string;
+      action_type: 'skip' | 'approve' | 'add_more';
+      field_name?: string;
+      variant?: 'primary' | 'secondary' | 'outline';
+    }> = [];
+
+    switch (context) {
+      case 'after_question':
+        // Show skip button for questions about specific fields
+        if (fieldName) {
+          actions.push({
+            id: `skip_${fieldName}_${Date.now()}`,
+            label: 'Skip this question',
+            action_type: 'skip',
+            field_name: fieldName,
+            variant: 'outline'
+          });
+        }
+        break;
+        
+      case 'after_information':
+        // Show add more details button after information is processed
+        actions.push({
+          id: `add_more_${Date.now()}`,
+          label: 'Add more details',
+          action_type: 'add_more',
+          variant: 'secondary'
+        });
+        break;
+        
+    }
+
+    return {
+      type: 'ui_actions',
+      ui_actions: {
+        type: 'buttons',
+        context,
+        actions
+      }
+    };
+  }
+
+  // Helper: Extract field name from question text
+  private extractFieldNameFromQuestion(questionText: string): string | undefined {
+    // Map common question patterns to field names
+    const fieldPatterns: Record<string, string> = {
+      'company name': 'company_name',
+      'organization\'s name': 'company_name',  // Added for "What is your organization's name?"
+      'industry': 'industry', 
+      'vision statement': 'vision_statement',
+      'success metrics': 'success_metrics',
+      'measure success': 'success_metrics',  // Added for "How will you measure success?"
+      'target outcomes': 'target_outcomes',
+      'specific outcomes': 'target_outcomes',  // Added for "specific outcomes or results"
+      'outcomes or results': 'target_outcomes',  // Added for "outcomes or results"
+      'results you want to achieve': 'target_outcomes',  // Added for "results do you want to achieve"
+      'timeline': 'timeline',
+      'timeframe': 'timeline',  // Added for "What is your target timeframe"
+      'strategic themes': 'key_themes',
+      'main strategic themes': 'key_themes',  // Added for "What are the main strategic themes"
+      'current strategy': 'current_strategy',
+      'strategic direction': 'current_strategy',  // Added for "current strategic direction"
+      'competitive landscape': 'competitive_landscape',
+      'market size': 'market_size',
+      'constraints': 'constraints',
+      'assumptions': 'assumptions',
+      'strategic priorities': 'strategic_priorities',
+      'company size': 'company_size'
+    };
+
+    const questionLower = questionText.toLowerCase();
+    
+    for (const [pattern, fieldName] of Object.entries(fieldPatterns)) {
+      if (questionLower.includes(pattern)) {
+        return fieldName;
+      }
+    }
+    
+    return undefined;
   }
 
   // Note: Conversation message indexing removed - using ChatGPT memory system instead

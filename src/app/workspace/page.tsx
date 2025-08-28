@@ -305,7 +305,7 @@ export default function WorkspaceHomePage() {
       title: 'Vision',
       description: 'Create and develop strategic visions with AI-powered assistance',
       href: '/vision',
-      icon: Eye,
+      icon: FileText,
       color: 'bg-purple-500',
       hoverColor: 'hover:bg-purple-600'
     },
@@ -617,7 +617,7 @@ export default function WorkspaceHomePage() {
                                   switch (role) {
                                     case 'admin': return <Crown className="w-4 h-4 text-amber-600" />;
                                     case 'member': return <Shield className="w-4 h-4 text-blue-600" />;
-                                    case 'viewer': return <Eye className="w-4 h-4 text-gray-600" />;
+                                    case 'viewer': return <FileText className="w-4 h-4 text-gray-600" />;
                                     default: return <Users className="w-4 h-4 text-gray-600" />;
                                   }
                                 };
