@@ -32,18 +32,10 @@ function DeclineInvitePageContent() {
 
   const loadInviteDetails = async () => {
     try {
-      // Get invite details
+      // Get basic invite details
       const { data: invite, error: inviteError } = await supabase
         .from('workspace_invites')
-        .select(`
-          id,
-          email,
-          status,
-          created_at,
-          expires_at,
-          workspaces!workspace_invites_workspace_id_fkey(name, slug),
-          profiles!workspace_invites_invited_by_fkey(full_name)
-        `)
+        .select('id, email, status, created_at, expires_at, workspace_id, invited_by')
         .eq('id', inviteId)
         .single();
 
@@ -52,6 +44,29 @@ function DeclineInvitePageContent() {
         setLoading(false);
         return;
       }
+
+      // Get workspace details separately
+      const { data: workspace } = await supabase
+        .from('workspaces')
+        .select('name, slug')
+        .eq('id', invite.workspace_id)
+        .single();
+
+      // Get inviter profile separately  
+      const { data: inviterProfile } = invite.invited_by ? 
+        await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', invite.invited_by)
+          .single() : 
+        { data: null };
+
+      // Combine the data
+      const enrichedInvite = {
+        ...invite,
+        workspaces: workspace,
+        profiles: inviterProfile
+      };
 
       // Check invite status
       if (invite.status === 'accepted') {
@@ -72,7 +87,7 @@ function DeclineInvitePageContent() {
         return;
       }
 
-      setInviteData(invite);
+      setInviteData(enrichedInvite);
       setLoading(false);
 
     } catch (err: any) {
