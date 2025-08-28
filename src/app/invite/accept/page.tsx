@@ -32,12 +32,16 @@ function AcceptInvitePageContent() {
 
   const loadInviteDetails = async () => {
     try {
+      console.log('[AcceptInvite] Loading invite details for ID:', inviteId);
+      
       // Get basic invite details
       const { data: invite, error: inviteError } = await supabase
         .from('workspace_invites')
         .select('id, email, status, created_at, expires_at, workspace_id, invited_by')
         .eq('id', inviteId)
         .single();
+      
+      console.log('[AcceptInvite] Invite query result:', { invite, inviteError });
 
       if (inviteError || !invite) {
         setError('Invitation not found or invalid');
@@ -105,6 +109,8 @@ function AcceptInvitePageContent() {
   };
 
   const handleAcceptInvite = async () => {
+    console.log('[AcceptInvite] handleAcceptInvite called:', { inviteId, user: !!user, profileEmail: profile?.email, inviteEmail: inviteData?.email });
+    
     if (!inviteId || !user) {
       setError('Please sign in to accept this invitation');
       return;
@@ -120,7 +126,9 @@ function AcceptInvitePageContent() {
     setError('');
 
     try {
+      console.log('[AcceptInvite] Calling acceptWorkspaceInvite...');
       const { error } = await db.acceptWorkspaceInvite(inviteId);
+      console.log('[AcceptInvite] acceptWorkspaceInvite result:', { error });
       
       if (error) {
         setError(error.message || 'Failed to accept invitation');
@@ -143,7 +151,7 @@ function AcceptInvitePageContent() {
   const handleSignIn = () => {
     // Store the current URL to redirect back after sign in
     localStorage.setItem('redirect_after_auth', window.location.href);
-    router.push('/auth/signin');
+    router.push('/login');
   };
 
   if (loading) {

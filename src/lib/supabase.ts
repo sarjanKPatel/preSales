@@ -460,8 +460,15 @@ export const db = {
   // Accept workspace invite
   async acceptWorkspaceInvite(inviteId: string) {
     try {
+      console.log('[DB] acceptWorkspaceInvite called with inviteId:', inviteId);
+      
       const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return { data: null, error: new Error('User not authenticated') };
+      if (!user.user) {
+        console.log('[DB] User not authenticated');
+        return { data: null, error: new Error('User not authenticated') };
+      }
+      
+      console.log('[DB] User authenticated:', user.user.email);
 
       // Get the invite details
       const { data: invite, error: inviteError } = await supabase
@@ -470,6 +477,8 @@ export const db = {
         .eq('id', inviteId)
         .eq('email', user.user.email)
         .single();
+      
+      console.log('[DB] Invite query result:', { invite, inviteError });
 
       if (inviteError || !invite) {
         return { data: null, error: new Error('Invite not found or not authorized') };
@@ -492,6 +501,12 @@ export const db = {
       }
 
       // Add user to workspace_members
+      console.log('[DB] Adding user to workspace_members:', {
+        workspace_id: invite.workspace_id,
+        user_id: user.user.id,
+        role: invite.role || 'member'
+      });
+      
       const { error: memberError } = await supabase
         .from('workspace_members')
         .insert({
@@ -501,19 +516,25 @@ export const db = {
         });
 
       if (memberError) {
+        console.log('[DB] Error adding user to workspace:', memberError);
         return { data: null, error: memberError };
       }
+      
+      console.log('[DB] User added to workspace successfully');
 
       // Update invite status to accepted
+      console.log('[DB] Updating invite status to accepted');
       const { error: updateError } = await supabase
         .from('workspace_invites')
         .update({ status: 'accepted' })
         .eq('id', inviteId);
 
       if (updateError) {
+        console.log('[DB] Error updating invite status:', updateError);
         return { data: null, error: updateError };
       }
-
+      
+      console.log('[DB] Invite accepted successfully');
       return { data: { success: true }, error: null };
     } catch (error) {
       return { data: null, error: error instanceof Error ? error : new Error(String(error)) };

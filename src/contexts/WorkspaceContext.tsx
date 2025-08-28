@@ -331,16 +331,17 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const combinedLoading = authLoading || loading;
   
   // Only log when we have meaningful data (not during initial load)
-
-    console.log('[WorkspaceContext] State:', {
-      authLoading,
-      workspaceLoading: loading,
-      combinedLoading,
-      hasUser: !!user,
-      workspacesCount: workspaces.length,
-      currentWorkspace: currentWorkspace?.name || 'None selected',
-      currentWorkspaceId: currentWorkspace?.id
-    });
+  
+  // Commented out to reduce console spam
+  // console.log('[WorkspaceContext] State:', {
+  //   authLoading,
+  //   workspaceLoading: loading,
+  //   combinedLoading,
+  //   hasUser: !!user,
+  //   workspacesCount: workspaces.length,
+  //   currentWorkspace: currentWorkspace?.name || 'None selected',
+  //   currentWorkspaceId: currentWorkspace?.id
+  // });
   
 
   // Log when everything is fully loaded
