@@ -466,7 +466,7 @@ export const db = {
       // Get the invite details
       const { data: invite, error: inviteError } = await supabase
         .from('workspace_invites')
-        .select('workspace_id, email, status')
+        .select('workspace_id, email, status, role')
         .eq('id', inviteId)
         .eq('email', user.user.email)
         .single();
@@ -497,7 +497,7 @@ export const db = {
         .insert({
           workspace_id: invite.workspace_id,
           user_id: user.user.id,
-          role: 'member' // Default role, could be enhanced to use invite role
+          role: invite.role || 'member' // Use role from invitation
         });
 
       if (memberError) {
