@@ -337,6 +337,9 @@ const EnhancedVisionChatLayout = memo(function EnhancedVisionChatLayout({
         return;
       }
 
+      // Start agent processing state
+      setIsAgentProcessing(true);
+
       // Store user message in database directly
       const userMessage = await db.createChatMessage(sessionIdToUse, 'user', content);
       
@@ -412,6 +415,9 @@ const EnhancedVisionChatLayout = memo(function EnhancedVisionChatLayout({
       
     } catch (error) {
       console.error('Failed to send message:', error);
+    } finally {
+      // End agent processing state
+      setIsAgentProcessing(false);
     }
   }, [activeSessionId, createSession, user, currentWorkspace, visionId, handleNewMessage]);
 
@@ -504,7 +510,7 @@ const EnhancedVisionChatLayout = memo(function EnhancedVisionChatLayout({
             onSendMessage={handleSendMessage}
             onRegenerateMessage={handleRegenerateMessage}
             onAction={handleUIAction}
-            isLoading={isGenerating}
+            isLoading={isGenerating || isAgentProcessing}
             className="h-full"
             onPreviewVision={handlePreviewVision}
           />
@@ -534,7 +540,7 @@ const EnhancedVisionChatLayout = memo(function EnhancedVisionChatLayout({
           <div className="fixed bottom-4 left-4 right-4 z-40">
             <ChatInput
               onSendMessage={handleSendMessage}
-              disabled={isGenerating}
+              disabled={isGenerating || isAgentProcessing}
               placeholder="Ask to update your vision or get more details..."
             />
           </div>
