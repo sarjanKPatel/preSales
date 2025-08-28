@@ -34,43 +34,28 @@ function AcceptInvitePageContent() {
     try {
       console.log('[AcceptInvite] Loading invite details for ID:', inviteId);
       
-      // Get basic invite details
-      const { data: invite, error: inviteError } = await supabase
-        .from('workspace_invites')
-        .select('id, email, status, created_at, expires_at, workspace_id, invited_by')
-        .eq('id', inviteId)
-        .single();
+      // Get basic invite details using service role (bypasses RLS)
+      const response = await fetch(`/api/invite/${inviteId}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
       
-      console.log('[AcceptInvite] Invite query result:', { invite, inviteError });
-
-      if (inviteError || !invite) {
+      if (!response.ok) {
+        const result = await response.json();
+        console.log('[AcceptInvite] API error:', result);
         setError('Invitation not found or invalid');
         setLoading(false);
         return;
       }
+      
+      const invite = await response.json();
+      console.log('[AcceptInvite] Invite data from API:', invite);
 
-      // Get workspace details separately
-      const { data: workspace } = await supabase
-        .from('workspaces')
-        .select('name, slug')
-        .eq('id', invite.workspace_id)
-        .single();
-
-      // Get inviter profile separately  
-      const { data: inviterProfile } = invite.invited_by ? 
-        await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('id', invite.invited_by)
-          .single() : 
-        { data: null };
-
-      // Combine the data
-      const enrichedInvite = {
-        ...invite,
-        workspaces: workspace,
-        profiles: inviterProfile
-      };
+      if (!invite) {
+        setError('Invitation not found or invalid');
+        setLoading(false);
+        return;
+      }
 
       // Check if invite is expired
       if (invite.expires_at && new Date() > new Date(invite.expires_at)) {
@@ -98,7 +83,7 @@ function AcceptInvitePageContent() {
         return;
       }
 
-      setInviteData(enrichedInvite);
+      setInviteData(invite);
       setLoading(false);
 
     } catch (err: any) {
