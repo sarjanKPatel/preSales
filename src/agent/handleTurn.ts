@@ -785,7 +785,7 @@ export class TurnHandler {
         let fieldName: string | undefined;
         if (gapResult.data && gapResult.data.smart_questions) {
           // Try to find the smart question that matches this question text
-          const smartQuestion = gapResult.data.smart_questions.find(sq => sq.question === firstQuestion);
+          const smartQuestion = gapResult.data.smart_questions.find((sq: { question: string; target_fields: string[]; priority: 'high' | 'medium' | 'low' }) => sq.question === firstQuestion);
           if (smartQuestion && smartQuestion.target_fields && smartQuestion.target_fields.length > 0) {
             fieldName = smartQuestion.target_fields[0];
             console.log('[CheckGaps] Using smart question target field:', fieldName);
@@ -933,7 +933,7 @@ export class TurnHandler {
               let fieldName: string | undefined;
               if (gapResult.data.smart_questions && gapResult.data.smart_questions.length > 0) {
                 // Use the target_fields from smart_questions for accurate mapping
-                const smartQuestion = gapResult.data.smart_questions.find(sq => sq.question === firstQuestion);
+                const smartQuestion = gapResult.data.smart_questions.find((sq: { question: string; target_fields: string[]; priority: 'high' | 'medium' | 'low' }) => sq.question === firstQuestion);
                 if (smartQuestion && smartQuestion.target_fields && smartQuestion.target_fields.length > 0) {
                   fieldName = smartQuestion.target_fields[0]; // Use the first target field
                   console.log('[HandleFocusOnVision] Using smart question target field:', fieldName);
