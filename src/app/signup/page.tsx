@@ -34,7 +34,7 @@ export default function SignupPage() {
     // If user is approved, redirect to workspace dashboard
     // WorkspaceGate will handle workspace creation if needed
     if (profile?.waitlist_status === 'approved') {
-      router.push('/vision');
+      router.push('/workspace');
       return;
     }
 

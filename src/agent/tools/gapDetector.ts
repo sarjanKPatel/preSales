@@ -87,10 +87,10 @@ export class GapDetector implements Tool<GapDetectorInput, GapDetectorOutput> {
         qa_history: vision_state.metadata?.gap_analysis?.qa_history ?? [],
       };
 
-      // Convert smart questions to simple strings for output
+      // Convert smart questions to simple strings for output - ONLY return the top priority question
       const nextQuestions = gapResult.next_questions
         .sort((a, b) => this.getPriorityScore(a.priority) - this.getPriorityScore(b.priority))
-        .slice(0, 3)
+        .slice(0, 1)
         .map(q => q.question);
 
       return {

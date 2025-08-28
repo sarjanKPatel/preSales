@@ -30,6 +30,8 @@ export class InformationExtractor implements Tool<InformationExtractorInput, Inf
       const prompt = this.buildExtractionPrompt(user_message, current_vision, session_context);
       
       console.log('[InformationExtractor] Sending to LLM for extraction...');
+      console.log('[InformationExtractor] Prompt preview (first 500 chars):', prompt.substring(0, 500));
+      console.log('[InformationExtractor] User message being extracted:', user_message);
       
       // Get LLM response
       const response = await this.llmProvider.complete(prompt, {
@@ -67,24 +69,67 @@ export class InformationExtractor implements Tool<InformationExtractorInput, Inf
       
       console.log('[Extraction] Vision state AFTER merging:', JSON.stringify(updatedVisionState, null, 2));
 
-      // Persist if config provided
+      // Persist business data to vision state
       if (input.persistence_config && updatedVisionState) {
+        console.log('[InformationExtractor] Attempting database persistence...', {
+          visionId: input.persistence_config.vision_id,
+          workspaceId: input.persistence_config.workspace_id,
+          userId: input.persistence_config.user_id,
+          hasVisionState: !!updatedVisionState
+        });
+        
+        // Check if company name changed to update title
+        const companyNameChanged = !!(current_vision?.company_name !== updatedVisionState.company_name && 
+                                     updatedVisionState.company_name);
+        
+        if (companyNameChanged) {
+          console.log('[InformationExtractor] Company name changed, will update vision title:', {
+            oldName: current_vision?.company_name,
+            newName: updatedVisionState.company_name
+          });
+        }
+        
+        // Only process business data - RAG handles personal data from conversation
+        const { metadata, ...businessVisionState } = updatedVisionState;
+        
         try {
           const persistResult = await this.visionPersistence.updateVisionAtomic({
             visionId: input.persistence_config.vision_id,
-            visionState: updatedVisionState,
+            visionState: businessVisionState, // Only business data to database
             workspaceId: input.persistence_config.workspace_id,
             userId: input.persistence_config.user_id,
+            shouldUpdateTitle: companyNameChanged,
+            newTitle: companyNameChanged ? businessVisionState.company_name : undefined,
+          });
+
+          console.log('[InformationExtractor] Persistence attempt completed:', {
+            success: persistResult.success,
+            completenessScore: persistResult.completenessScore,
+            newVersion: persistResult.newVersion,
+            error: persistResult.error
           });
 
           if (persistResult.success) {
-            console.log(`[InformationExtractor] Vision persisted - Completeness: ${persistResult.completenessScore}%`);
+            console.log(`[InformationExtractor] ✅ Vision persisted to database - Completeness: ${persistResult.completenessScore}%`);
           } else {
-            console.warn('[InformationExtractor] Failed to persist:', persistResult.error);
+            console.error('[InformationExtractor] ❌ Failed to persist to database:', persistResult.error);
+            // Log additional details for debugging
+            if (persistResult.conflictData) {
+              console.error('[InformationExtractor] Conflict details:', persistResult.conflictData);
+            }
           }
         } catch (error) {
-          console.warn('[InformationExtractor] Persistence error:', error);
+          console.error('[InformationExtractor] ❌ Persistence exception:', error);
+          console.error('[InformationExtractor] Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
         }
+        
+        // Personal data (like names) will be handled by RAG from conversation history
+        // No need to extract or index personal data here
+      } else {
+        console.warn('[InformationExtractor] ⚠️ Skipping persistence:', {
+          hasPersistenceConfig: !!input.persistence_config,
+          hasUpdatedVisionState: !!updatedVisionState
+        });
       }
 
       return {
@@ -119,11 +164,22 @@ Extract structured company vision information from the user message and return O
 
 ### Rules:
 1. Map information to the standard schema when possible.
-2. If a piece of information does not match any schema field but is still important, 
+2. **IMPORTANT**: If a piece of information does not match any schema field but is still valuable, 
    store it under metadata.custom_fields with a meaningful key.
 3. Use confidence scores from 0.0–1.0 based on extraction certainty.
 4. If confidence < 0.5, set value to null.
 5. Do not invent facts. Only use data clearly stated or strongly implied.
+
+### Custom Fields Examples (BUSINESS DATA ONLY):
+- Specific product names → "product_name" 
+- Team size, funding → "team_size", "funding_status"
+- Geographic info → "target_market", "geographic_focus"  
+- Business-specific terms → "technology_stack", "business_model"
+- Any other BUSINESS-RELATED info not in the standard schema
+
+### Personal Data (DO NOT EXTRACT):
+- User names, contact info → RAG will handle from conversation
+- Personal preferences → RAG will handle from conversation
 
 ${recentContext}User message: "${userMessage}"
 
@@ -182,6 +238,12 @@ Current vision context: ${contextSummary}
 - "direct": Explicitly stated in the message
 - "inferred": Logically derived from stated information  
 - "contextual": Inferred from conversation history or existing vision
+
+### Special Instructions:
+- For user messages like "My name is John" → DO NOT extract (RAG handles personal data)
+- For product/service names not fitting schema → put in custom_fields (business data)
+- For business details not in schema → put in custom_fields (business data)
+- Focus ONLY on extracting business-related information
 
 Only extract information explicitly mentioned or clearly implied. Do not hallucinate data.`;
   }
@@ -279,4 +341,6 @@ Only extract information explicitly mentioned or clearly implied. Do not halluci
       ? confidences.reduce((sum, c) => sum + c, 0) / confidences.length 
       : 0;
   }
+
+  // isPersonalData method removed - RAG handles all personal data from conversation
 }

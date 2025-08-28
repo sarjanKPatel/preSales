@@ -28,7 +28,7 @@ export default function HomePage() {
         router.push('/waitlist');
       } else {
         // If approved, go to workspace dashboard
-        router.push('/vision');
+        router.push('/workspace');
       }
     } else {
       // If not logged in, go to signup
@@ -87,7 +87,7 @@ export default function HomePage() {
   return (
     <Layout padding={false} maxWidth="full">
       {/* Hero Section */}
-      <section className="relative w-full px-4 sm:px-6 pt-24 sm:pt-32 md:pt-40 lg:pt-48 pb-20 sm:pb-32 lg:pb-40 overflow-hidden">
+      <section className="relative w-full min-h-screen px-4 sm:px-6 pt-20 pb-20 overflow-hidden flex items-center justify-center">
         {/* Full-width dot pattern background */}
         <div 
           className="absolute inset-0 w-full h-full dot-grid-bg"
@@ -98,7 +98,7 @@ export default function HomePage() {
           }}
         ></div>
         
-        <div className="relative z-10 w-full max-w-none">
+        <div className="relative z-10 w-full max-w-7xl mx-auto">
           <div className="text-center">
             
             {/* Main Headline */}
@@ -123,19 +123,19 @@ export default function HomePage() {
             
             {/* CTA Buttons */}
             <ScrollReveal direction="up" delay={400}>
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mb-12 sm:mb-20 px-4 sm:px-0">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mb-8 sm:mb-12 px-4 sm:px-0">
                 <Button
                   onClick={() => router.push('/login')}
                   variant="primary"
                   size="lg"
-                  className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-10 py-3 sm:py-4 font-semibold bg-gray-600 hover:bg-gray-700 text-white border-0 font-sans"
+                  className="w-full sm:w-auto text-sm sm:text-base lg:text-lg px-4 sm:px-6 lg:px-10 py-2.5 sm:py-3 lg:py-4 font-semibold bg-gray-600 hover:bg-gray-700 text-white border-0 font-sans whitespace-nowrap"
                 >
                   Get Started
                 </Button>
                 <Button
                   variant="outline"
                   size="lg"
-                  className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-10 py-3 sm:py-4 font-semibold border-2 border-blue-600 text-blue-600 hover:bg-blue-50 bg-transparent font-sans"
+                  className="w-full sm:w-auto text-sm sm:text-base lg:text-lg px-4 sm:px-6 lg:px-10 py-2.5 sm:py-3 lg:py-4 font-semibold border-2 border-blue-600 text-blue-600 hover:bg-blue-50 bg-transparent font-sans whitespace-nowrap"
                   onClick={() => router.push('/signup')}
                 >
                   Sign Up

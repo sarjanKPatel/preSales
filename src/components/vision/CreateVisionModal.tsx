@@ -24,7 +24,6 @@ export default function CreateVisionModal({ isOpen, onClose, onSubmit, loading }
     // Submit with default values
     await onSubmit({
       title: title.trim(),
-      description: `Strategic vision: ${title.trim()}`,
       category: 'strategy',
       impact: 'medium',
       timeframe: 'medium-term',

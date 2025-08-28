@@ -7,7 +7,6 @@ export interface Vision {
   workspace_id: string;
   created_by: string;
   title: string;
-  description: string;
   category: 'product' | 'market' | 'strategy' | 'innovation';
   impact: 'low' | 'medium' | 'high';
   timeframe: 'short-term' | 'medium-term' | 'long-term';
@@ -49,6 +48,9 @@ export interface VisionState {
   strategic_priorities?: string[];
   company_size?: number;
   
+  // Custom fields for additional business data that doesn't fit standard schema
+  custom_fields?: Record<string, any>;
+  
   // Nested metadata object
   metadata?: {
     session_id?: string;
@@ -87,7 +89,6 @@ export interface VisionWithDetails extends Vision {
 
 export interface CreateVisionInput {
   title: string;
-  description: string;
   category: Vision['category'];
   impact: Vision['impact'];
   timeframe: Vision['timeframe'];
@@ -96,7 +97,6 @@ export interface CreateVisionInput {
 
 export interface UpdateVisionInput {
   title?: string;
-  description?: string;
   category?: Vision['category'];
   impact?: Vision['impact'];
   timeframe?: Vision['timeframe'];

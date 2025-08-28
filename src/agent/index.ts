@@ -6,8 +6,7 @@ export * from './routing';
 // Import for internal use
 import { createAgent, processVisionMessage } from './routing';
 
-// Memory System
-export * from './memory/context';
+// Memory System - Old context removed, using ChatGPT memory system
 
 // LLM Integration
 export * from './llm/provider';
@@ -59,9 +58,7 @@ export {
   complete,
 } from './llm/routing';
 
-export {
-  ContextLoader,
-} from './memory/context';
+// Old ContextLoader removed - using ChatGPT memory system
 
 
 export {

@@ -51,8 +51,8 @@ export default function WorkspaceSetupPage() {
     try {
       const result = await createWorkspace(workspaceName.trim());
       if (result.success && result.workspace) {
-        // Redirect to welcome page with workspace name and ID
-        router.push(`/workspace-welcome?name=${encodeURIComponent(workspaceName.trim())}&id=${result.workspace.id}`);
+        // Redirect to main workspace home page
+        router.push('/workspace');
       } else {
         setError(result.error || 'Failed to create workspace');
       }

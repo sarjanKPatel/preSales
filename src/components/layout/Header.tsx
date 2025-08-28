@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import Button from '@/components/Button';
-import WorkspaceSwitcher from '@/components/workspaces/WorkspaceSwitcher';
 import { 
   ChevronDown, 
   User, 
@@ -78,10 +77,6 @@ export default function Header() {
 
   const handleSignUp = () => {
     router.push('/signup');
-  };
-
-  const handleCreateWorkspace = () => {
-    router.push('/workspace-setup');
   };
 
   // Removed handleWorkspaceCreated as we no longer use modal
@@ -169,57 +164,19 @@ export default function Header() {
               </Link>
             </div>
             
-            {/* Desktop Workspace Switcher - hidden when space is limited */}
-            <div className="hidden lg:block">
-              {authLoading ? (
-                <div className="flex items-center gap-2 px-3 py-2 bg-gray-200 rounded-lg animate-pulse w-32 h-10">
-                  <div className="w-4 h-4 bg-gray-300 rounded" />
-                  <div className="flex-1 h-4 bg-gray-300 rounded" />
-                  <div className="w-4 h-4 bg-gray-300 rounded" />
-                </div>
-              ) : user ? (
-                <WorkspaceSwitcher 
-                  onCreateWorkspace={handleCreateWorkspace}
-                  compact={true}
-                  useFixedDropdown={true}
-                />
-              ) : null}
-            </div>
           </div>
 
-          {/* Center: Desktop Navigation - hidden when space is limited */}
-          <nav className="hidden lg:flex items-center justify-center space-x-6 flex-shrink-0">
-            <Link 
-              href="/workspace" 
-              className="text-gray-500 hover:text-gray-700 transition-colors font-medium whitespace-nowrap"
-            >
-              Home
-            </Link>
-            <Link 
-              href="/vision" 
-              className="text-gray-500 hover:text-gray-700 transition-colors font-medium whitespace-nowrap"
-            >
-              Vision
-            </Link>
-            <Link 
-              href="/leads" 
-              className="text-gray-500 hover:text-gray-700 transition-colors font-medium whitespace-nowrap"
-            >
-              Leads
-            </Link>
-            <Link 
-              href="/proposals" 
-              className="text-gray-500 hover:text-gray-700 transition-colors font-medium whitespace-nowrap"
-            >
-              Proposals
-            </Link>
-            <Link 
-              href="/chat" 
-              className="text-gray-500 hover:text-gray-700 transition-colors font-medium whitespace-nowrap"
-            >
-              AI Assistant
-            </Link>
-          </nav>
+          {/* Center: Desktop Navigation - only show Home for authenticated users */}
+          {user && (
+            <nav className="hidden lg:flex items-center justify-center space-x-6 flex-shrink-0">
+              <Link 
+                href="/workspace" 
+                className="text-gray-500 hover:text-gray-700 transition-colors font-medium whitespace-nowrap"
+              >
+                Home
+              </Link>
+            </nav>
+          )}
 
           {/* Right: User Menu */}
           <div className="flex items-center justify-end space-x-2 flex-shrink-0">
@@ -251,7 +208,7 @@ export default function Header() {
 
               </div>
             ) : (
-              <div className="flex items-center space-x-3">
+              <div className="hidden sm:flex items-center space-x-3">
                 <Button variant="ghost" size="sm" onClick={handleSignIn}>
                   Sign In
                 </Button>
@@ -261,7 +218,7 @@ export default function Header() {
               </div>
             )}
 
-            {/* Mobile Menu Button - shows when navigation is hidden */}
+            {/* Mobile Menu Button - shows for unauthenticated users or when workspace switcher is hidden */}
             <button
               onClick={() => showMobileMenu ? closeMobileMenu() : setShowMobileMenu(true)}
               className="lg:hidden p-2 rounded-lg glass hover:bg-white/20 transition-all"
@@ -275,62 +232,52 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Mobile Menu - shows when navigation is hidden */}
+        {/* Mobile Menu - shows when navigation is hidden or for unauthenticated users */}
         {showMobileMenu && (
           <div className={`lg:hidden border-t border-white/20 py-4 glass transform transition-all duration-150 ease-out z-[60] ${
             isMobileMenuClosing ? 'animate-slide-up' : 'animate-slide-down'
           }`} ref={mobileMenuRef}>
-            {/* Mobile Workspace Switcher - shows when hidden from main header */}
+            
+            {/* Navigation - only show Home for authenticated users */}
             {user && (
-              <div className="lg:hidden px-2 pb-4 border-b border-white/20 mb-4">
-                <WorkspaceSwitcher 
-                  onCreateWorkspace={() => {
+              <nav className="flex flex-col space-y-1">
+                <Link 
+                  href="/workspace"
+                  onClick={closeMobileMenu} 
+                  className="w-full flex items-center px-3 py-2 text-left hover:bg-gray-50 transition-colors text-sm font-medium text-gray-900"
+                >
+                  Home
+                </Link>
+              </nav>
+            )}
+
+            {/* Authentication buttons - only show for unauthenticated users */}
+            {!user && (
+              <div className="flex flex-col space-y-3 px-3">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
                     closeMobileMenu();
-                    handleCreateWorkspace();
+                    handleSignIn();
                   }}
-                  compact={false}
-                  useFixedDropdown={false}
-                />
+                  className="w-full text-left justify-center"
+                >
+                  Sign In
+                </Button>
+                <Button 
+                  variant="primary" 
+                  size="sm" 
+                  onClick={() => {
+                    closeMobileMenu();
+                    handleSignUp();
+                  }}
+                  className="w-full text-left justify-center"
+                >
+                  Get Started
+                </Button>
               </div>
             )}
-            
-            <nav className="flex flex-col space-y-1">
-              <Link 
-                href="/workspace"
-                onClick={closeMobileMenu} 
-                className="w-full flex items-center px-3 py-2 text-left hover:bg-gray-50 transition-colors text-sm font-medium text-gray-900"
-              >
-                Home
-              </Link>
-              <Link 
-                href="/vision"
-                onClick={closeMobileMenu} 
-                className="w-full flex items-center px-3 py-2 text-left hover:bg-gray-50 transition-colors text-sm font-medium text-gray-900"
-              >
-                Vision
-              </Link>
-              <Link 
-                href="/leads"
-                onClick={closeMobileMenu} 
-                className="w-full flex items-center px-3 py-2 text-left hover:bg-gray-50 transition-colors text-sm font-medium text-gray-900"
-              >
-                Leads
-              </Link>
-              <Link 
-                href="/proposals"
-                onClick={closeMobileMenu} 
-                className="w-full flex items-center px-3 py-2 text-left hover:bg-gray-50 transition-colors text-sm font-medium text-gray-900"
-              >
-                Proposals
-              </Link>
-              <Link 
-                href="/chat"
-                onClick={closeMobileMenu} 
-                className="w-full flex items-center px-3 py-2 text-left hover:bg-gray-50 transition-colors text-sm font-medium text-gray-900"
-              >
-                AI Assistant
-              </Link>
-            </nav>
           </div>
         )}
       </div>

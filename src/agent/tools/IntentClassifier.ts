@@ -19,14 +19,14 @@ export class IntentClassifier implements Tool<IntentClassifierInput, IntentClass
       
       const prompt = this.buildClassificationPrompt(input);
       
-      console.log('[IntentClassifier] Sending to LLM...');
+      // console.log('[IntentClassifier] Sending to LLM...');
       const response = await this.llmProvider.complete(prompt, {
         model: 'gpt-4o',
         maxTokens: 300,
         temperature: 0.1, // Low temperature for consistent classification
       });
 
-      console.log('[IntentClassifier] Raw LLM response:', response.content);
+      // console.log('[IntentClassifier] Raw LLM response:', response.content);
       
       const classification = this.parseClassificationResponse(response.content);
       
@@ -53,7 +53,8 @@ export class IntentClassifier implements Tool<IntentClassifierInput, IntentClass
   private buildClassificationPrompt(input: IntentClassifierInput): string {
     const { user_message, conversation_history = [], vision_context, ui_context } = input;
     
-    const recentHistory = conversation_history.slice(-3).join('\n');
+    const recentHistory = conversation_history.slice(-4).join('\n');
+    
     const visionStatus = vision_context ? 
       `Vision completeness: ${vision_context.completeness_score}%
 Has company name: ${vision_context.has_company_name}
@@ -64,7 +65,9 @@ Last agent message: ${vision_context.last_agent_message || 'None'}` : 'No vision
     const uiStatus = ui_context?.buttons_shown?.length ? 
       `Buttons shown: ${ui_context.buttons_shown.join(', ')}` : '';
 
-    return `You are an intent classifier for a vision creation AI agent. Classify the user's intent based on their message and context.
+    return `You are an intent classifier for a vision creation AI agent. Classify the user's intent based on their message and full conversation context.
+
+IMPORTANT: Analyze the conversation flow. If the agent recently asked the user a clarification question (like "What would you like to change it to?" or "What industry would you like?"), and the current user message appears to be answering that question, classify it as COMMAND with subIntent "update_vision".
 
 ## Intent Types:
 - QUESTION: User is asking about existing vision data (what, who, where, when, why, how)
@@ -84,17 +87,28 @@ ${uiStatus}
 "${user_message}"
 
 ## Instructions:
-1. Analyze the user's message in context
-2. Determine the primary intent - if the message contains question words (what, who, where, when, why, how) or ends with "?", it's likely a QUESTION
-3. Extract any entities mentioned (company names, industries, etc.)
-4. Consider if the user is responding to a previous question
-5. Check if they're referencing UI elements
+1. Look at the recent conversation history to understand the flow
+2. If the agent recently asked for clarification and user is providing an answer, classify as COMMAND with "update_vision"
+3. Otherwise, determine intent based on user's message content
+4. For questions (what, how, why, etc. or ends with "?"), use QUESTION intent
+5. Extract any entities mentioned (company names, industries, etc.)
+6. Check if they're referencing UI elements
+
+## For COMMAND intent, use these standardized subIntents:
+- "focus_on_vision" - user wants to work on/develop vision 
+- "summarize" - user wants summary/overview
+- "update_vision" - user wants to change/modify vision OR is responding to a clarification question
+- "finalize" - user wants to complete/finalize vision
+- "export" - user wants to export vision
+
+CRITICAL: Route ALL update/change/modify requests to "update_vision".
+CRITICAL: If user is responding to agent's clarification question, route to "update_vision".
 
 ## Response Format (JSON):
 {
   "intent": "INTENT_TYPE (must be uppercase: QUESTION, INFORMATION, CLARIFICATION, COMMAND, UI_ACTION, GREETING, or UNKNOWN)",
   "confidence": 0.0-1.0,
-  "subIntent": "optional specific intent",
+  "subIntent": "use standardized subIntents above for COMMAND, optional for others",
   "entities": {
     "entity_name": "entity_value"
   },
@@ -132,11 +146,11 @@ Respond with ONLY the JSON object.`;
       const intent = intentMapping[upperIntent] || IntentType.UNKNOWN;
       
       // Log mapping for debugging
-      console.log('[IntentClassifier] Intent mapping:', {
-        rawIntent: parsed.intent,
-        upperIntent,
-        mappedIntent: intent
-      });
+      // console.log('[IntentClassifier] Intent mapping:', {
+      //   rawIntent: parsed.intent,
+      //   upperIntent,
+      //   mappedIntent: intent
+      // });
       
       // Special handling: if reasoning mentions greeting but intent is unknown, correct it
       if (intent === IntentType.UNKNOWN && parsed.reasoning?.toLowerCase().includes('greeting')) {

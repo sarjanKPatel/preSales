@@ -16,8 +16,8 @@ export default function WorkspaceGate({ children, fallback }: WorkspaceGateProps
   const { user, loading: authLoading } = useAuth();
   const { currentWorkspace, workspaces, loading: workspaceLoading, setCurrentWorkspace } = useWorkspace();
 
-  // Don't apply workspace gate logic to workspace setup/welcome pages
-  const isWorkspaceSetupPage = pathname === '/workspace-setup' || pathname === '/workspace-welcome';
+  // Don't apply workspace gate logic to workspace setup page
+  const isWorkspaceSetupPage = pathname === '/workspace-setup';
 
   useEffect(() => {
     if (authLoading || workspaceLoading || isWorkspaceSetupPage) return;
@@ -55,7 +55,7 @@ export default function WorkspaceGate({ children, fallback }: WorkspaceGateProps
     );
   }
 
-  // Don't gate workspace setup/welcome pages
+  // Don't gate workspace setup page
   if (isWorkspaceSetupPage) {
     return <>{children}</>;
   }

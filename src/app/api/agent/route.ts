@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initializeAgent, processVisionMessage } from '@/agent';
+import { createAgent, processVisionMessage } from '@/agent/routing';
 
 // Initialize agent on server side with environment variables
 let agentInitialized = false;
@@ -9,7 +9,7 @@ async function ensureAgentInitialized() {
   if (!agentInitialized) {
     try {
       // No need to pass Supabase config - the agent will use the shared instance
-      agent = await initializeAgent();
+      agent = createAgent();
       agentInitialized = true;
     } catch (error) {
       console.error('[API] Failed to initialize AI agent:', error);

@@ -5,10 +5,12 @@ import { VisionStateManager } from './visionState';
 import { InformationExtractor } from './informationExtractor';
 import { IntentClassifier } from './IntentClassifier';
 import { QuestionAnswering } from './QuestionAnswering';
-import { ResponseFormatter } from './ResponseFormatter';
 import { VisionFinalizer } from './VisionFinalizer';
 import { UIActionHandler } from './UIActionHandler';
-import { LLMProvider, OpenAIProvider } from '../llm/provider';
+import { DynamicResponseGenerator } from './DynamicResponseGenerator';
+import { ValueExtractionAgent } from './ValueExtractionAgent';
+import { UpdateIntentParsingAgent } from './UpdateIntentParsingAgent';
+import { LLMProvider, OpenAIProvider, LLMProviderManager } from '../llm/provider';
 
 // Tool Registry Implementation
 class ToolRegistryImpl implements IToolRegistry {
@@ -70,10 +72,12 @@ export const toolRouter = new ToolRouterImpl(toolRegistry);
 // Register default tools
 export function initializeTools(llmProvider?: LLMProvider): void {
   try {
-    // Create OpenAI provider if not provided
+    // Create providers
     const openaiProvider = llmProvider instanceof OpenAIProvider 
       ? llmProvider 
       : new OpenAIProvider();
+    
+    const llmProviderManager = new LLMProviderManager();
     
     // Core tools
     toolRegistry.register(new GapDetector());
@@ -83,7 +87,11 @@ export function initializeTools(llmProvider?: LLMProvider): void {
     
     // Question answering and response tools
     toolRegistry.register(new QuestionAnswering(openaiProvider));
-    toolRegistry.register(new ResponseFormatter());
+    toolRegistry.register(new DynamicResponseGenerator(llmProviderManager));
+    
+    // Specialized update parsing agents
+    toolRegistry.register(new ValueExtractionAgent(llmProviderManager));
+    toolRegistry.register(new UpdateIntentParsingAgent(llmProviderManager));
     
     // Finalization and UI tools
     toolRegistry.register(new VisionFinalizer());
@@ -104,9 +112,11 @@ export {
   InformationExtractor, 
   IntentClassifier,
   QuestionAnswering,
-  ResponseFormatter,
   VisionFinalizer,
-  UIActionHandler
+  UIActionHandler,
+  DynamicResponseGenerator,
+  ValueExtractionAgent,
+  UpdateIntentParsingAgent
 };
 
 // Export types
